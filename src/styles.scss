@@ -387,36 +387,33 @@ button:disabled {
   transform-box: fill-box;
   transform-origin: center;
   will-change: transform, opacity;
-  animation: cp-blip-pulse 3.4s ease-out infinite;
+  animation: cp-blip-pulse 5.2s cubic-bezier(0.16, 0.62, 0.34, 1) infinite;
 }
 
 .cp-blip-core {
   transform-box: fill-box;
   transform-origin: center;
   will-change: transform, opacity;
-  animation: cp-blip-breathe 3.4s ease-in-out infinite;
+  animation: cp-blip-breathe 5.2s cubic-bezier(0.37, 0, 0.63, 1) infinite;
 }
 
 /* Peak and base opacity come from custom properties so one keyframe serves
    both intensities — the animation would otherwise override any static
    opacity set on the strong variant. */
+/* The glow is a radial-gradient fill built in map-backdrop.ts, not a blur.
+   Nothing here filters, so every frame is a pure compositor transform. */
 .cp-blip-halo {
-  --blip-base: 0.2;
-  --blip-peak: 0.44;
+  --blip-base: 0.26;
+  --blip-peak: 0.58;
   transform-box: fill-box;
   transform-origin: center;
-  filter: blur(7px);
-  /* Without this the blur is recomputed on every animated frame. Promoted to
-     its own layer, it is blurred once and then merely scaled by the
-     compositor — the single biggest win in this file. */
   will-change: transform, opacity;
-  animation: cp-blip-glow 3.4s ease-in-out infinite;
+  animation: cp-blip-glow 5.2s cubic-bezier(0.37, 0, 0.63, 1) infinite;
 }
 
 .cp-blip-halo-strong {
-  --blip-base: 0.32;
-  --blip-peak: 0.66;
-  filter: blur(10px);
+  --blip-base: 0.4;
+  --blip-peak: 0.82;
 }
 
 @keyframes cp-blip-glow {
@@ -433,12 +430,14 @@ button:disabled {
 
 @keyframes cp-blip-pulse {
   0% {
-    transform: scale(0.5);
-    opacity: 0.85;
+    transform: scale(0.55);
+    opacity: 0;
   }
-  70%,
+  12% {
+    opacity: 0.8;
+  }
   100% {
-    transform: scale(3.4);
+    transform: scale(3.2);
     opacity: 0;
   }
 }
@@ -446,11 +445,11 @@ button:disabled {
 @keyframes cp-blip-breathe {
   0%,
   100% {
-    transform: scale(0.85);
-    opacity: 0.7;
+    transform: scale(0.88);
+    opacity: 0.72;
   }
   50% {
-    transform: scale(1.1);
+    transform: scale(1.12);
     opacity: 1;
   }
 }

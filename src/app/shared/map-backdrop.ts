@@ -219,6 +219,35 @@ export class MapBackdrop implements AfterViewInit, OnDestroy {
     // Fills the hero at any aspect ratio without distorting the geometry.
     svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
 
+    // A radial gradient that fades to transparent looks the same as a blurred
+    // disc and costs nothing to animate. `filter: blur()` on a moving element
+    // is re-rasterised every frame; a gradient fill is painted once and then
+    // only scaled by the compositor. This is what makes the pulse smooth on a
+    // phone rather than merely cheaper.
+    const defs = document.createElementNS(SVG_NS, 'defs');
+    for (const [id, colour] of [
+      ['cp-glow-green', PALETTE.routeGreen],
+      ['cp-glow-amber', PALETTE.routeAmber],
+    ]) {
+      const gradient = document.createElementNS(SVG_NS, 'radialGradient');
+      gradient.setAttribute('id', id);
+
+      for (const [offset, opacity] of [
+        ['0%', '0.85'],
+        ['45%', '0.35'],
+        ['100%', '0'],
+      ]) {
+        const stop = document.createElementNS(SVG_NS, 'stop');
+        stop.setAttribute('offset', offset);
+        stop.setAttribute('stop-color', colour);
+        stop.setAttribute('stop-opacity', opacity);
+        gradient.appendChild(stop);
+      }
+
+      defs.appendChild(gradient);
+    }
+    svg.appendChild(defs);
+
     const add = (
       tag: string,
       attributes: Record<string, string | number>,
@@ -401,14 +430,17 @@ export class MapBackdrop implements AfterViewInit, OnDestroy {
       return element;
     };
 
-    // A soft pool of colour under the marker. Blurred rather than filtered, so
-    // it still reads as glow if drop-shadow is unavailable.
+    // A soft pool of colour under the marker, painted as a gradient rather than
+    // a blurred disc so that animating it costs the compositor nothing.
     const halo = circle(
-      strong ? 22 : 16,
+      strong ? 26 : 19,
       strong ? 'cp-blip-halo cp-blip-halo-strong' : 'cp-blip-halo',
       delay,
     );
-    halo.setAttribute('fill', colour);
+    halo.setAttribute(
+      'fill',
+      colour === PALETTE.routeAmber ? 'url(#cp-glow-amber)' : 'url(#cp-glow-green)',
+    );
 
     // No drop-shadow here. A filter on an element that is also animating forces
     // the browser to re-blur it every frame; the halo behind already supplies
@@ -418,13 +450,9 @@ export class MapBackdrop implements AfterViewInit, OnDestroy {
     ring.setAttribute('stroke', colour);
     ring.setAttribute('stroke-width', strong ? '1.9' : '1.6');
 
-    // Was three stacked drop-shadows — three separate blur passes per frame,
-    // per blip. One is indistinguishable once the halo is behind it.
-    const core = circle(
-      strong ? 4.2 : 3.4,
-      'cp-blip-core',
-      `${delay}; filter: drop-shadow(0 0 ${strong ? 9 : 6}px ${colour})`,
-    );
+    // No filter at all now. The gradient halo behind supplies every bit of the
+    // bloom this used to draw, and nothing on a moving element gets re-blurred.
+    const core = circle(strong ? 4.2 : 3.4, 'cp-blip-core', delay);
     core.setAttribute('fill', colour);
 
     group.appendChild(halo);
