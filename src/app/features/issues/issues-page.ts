@@ -27,9 +27,8 @@ import type { PublicTicket, TicketStatus } from '../../core/models';
     <div class="page">
       <h1>Issues in {{ label() }}</h1>
       <p class="muted lead">
-        {{ wards().length }} matching
-        {{ wards().length === 1 ? 'institution' : 'institutions' }}:
-        {{ wards().join(', ') || 'none' }}
+        Showing reports filed against “{{ label() }}” and its
+        {{ wards().length }} {{ wards().length === 1 ? 'campus' : 'campuses' }}.
       </p>
 
       @if (!auth.isAuthenticated()) {
@@ -46,7 +45,14 @@ import type { PublicTicket, TicketStatus } from '../../core/models';
       @if (loading()) {
         <p class="muted">Searching…</p>
       } @else if (tickets().length === 0) {
-        <p class="muted">No reports in this region yet.</p>
+        <div class="card empty">
+          <h2>Nothing reported here yet</h2>
+          <p class="muted">
+            No reports match “{{ label() }}”. Try a broader search — “Delhi” instead of a
+            specific campus — or be the first to report something.
+          </p>
+          <a class="btn-primary link-btn" routerLink="/">Report an issue</a>
+        </div>
       } @else {
         <div class="list">
           @for (ticket of tickets(); track ticket.id) {
@@ -104,6 +110,26 @@ import type { PublicTicket, TicketStatus } from '../../core/models';
     .lead {
       margin-top: -6px;
       margin-bottom: 20px;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 32px 20px;
+    }
+
+    .empty h2 {
+      margin-bottom: 6px;
+    }
+
+    .empty p {
+      max-width: 46ch;
+      margin: 0 auto 18px;
+    }
+
+    .link-btn {
+      display: inline-block;
+      text-decoration: none;
+      padding: 11px 18px;
     }
 
     .list {
@@ -243,6 +269,8 @@ export class IssuesPage {
   protected readonly pendingId = signal<string | null>(null);
   protected readonly label = signal('your region');
   protected readonly wards = signal<string[]>([]);
+  /** The raw search text, matched against ward_location case-insensitively. */
+  private readonly term = signal('');
 
   constructor() {
     this.route.queryParamMap.subscribe((params) => {
@@ -258,7 +286,8 @@ export class IssuesPage {
       ).map((institution) => institution.name);
 
       this.wards.set(matched);
-      void this.load(matched);
+      this.term.set(pincode || city);
+      void this.load(this.term(), matched);
     });
   }
 
@@ -317,13 +346,13 @@ export class IssuesPage {
     }
   }
 
-  private async load(wards: string[]): Promise<void> {
+  private async load(term: string, wards: string[]): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
 
     try {
       const [tickets, mine] = await Promise.all([
-        this.service.listPublicByWards(wards),
+        this.service.listPublicByRegion(term, wards),
         this.service.myUpvotedIds(),
       ]);
 

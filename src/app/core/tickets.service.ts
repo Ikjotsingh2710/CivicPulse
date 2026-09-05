@@ -103,20 +103,56 @@ export class TicketsService {
    * privacy boundary: it publishes the reporter's name and withholds their
    * phone number, and it runs as its owner so it can show one citizen another
    * citizen's report without opening up the underlying table.
+   *
+   * Matches on two things, because `ward_location` holds whichever the reporter
+   * picked from the capsule — a campus name OR a city name:
+   *
+   *   1. the campuses whose city or pincode matched the search, by exact name;
+   *   2. the search term itself, case-insensitively, so a report filed against
+   *      "New Delhi" is found by "new delhi", "Delhi" and "delhi" alike.
+   *
+   * Without the second, every city-filed report was invisible to search — the
+   * only names ever looked for were the institutions'.
+   *
+   * Two queries rather than one `or()`: campus names contain em-dashes and
+   * commas that PostgREST's inline filter grammar does not survive intact.
    */
-  async listPublicByWards(wards: readonly string[]): Promise<PublicTicket[]> {
-    if (wards.length === 0) return [];
+  async listPublicByRegion(term: string, wards: readonly string[]): Promise<PublicTicket[]> {
+    const needle = term.trim();
+    const select = () => supabase.from('public_tickets').select('*');
 
-    const { data, error } = await supabase
-      .from('public_tickets')
-      .select('*')
-      .in('ward_location', wards as string[])
-      // Most-supported first: that is the whole point of upvoting.
-      .order('upvote_count', { ascending: false })
-      .order('created_at', { ascending: false });
+    const requests: PromiseLike<{ data: unknown; error: unknown }>[] = [];
 
-    if (error) throw new Error(describeSupabaseError(error, 'Could not search that region.'));
-    return (data ?? []) as PublicTicket[];
+    if (needle) {
+      // `%` around the term, and `ilike` so capitalisation never hides a report.
+      requests.push(select().ilike('ward_location', `%${needle}%`));
+    }
+
+    if (wards.length > 0) {
+      requests.push(select().in('ward_location', wards as string[]));
+    }
+
+    if (requests.length === 0) return [];
+
+    const results = await Promise.all(requests);
+
+    const failure = results.find((result) => result.error);
+    if (failure) {
+      throw new Error(describeSupabaseError(failure.error as never, 'Could not search that region.'));
+    }
+
+    // A report can satisfy both queries, so dedupe on id before sorting.
+    const byId = new Map<string, PublicTicket>();
+    for (const result of results) {
+      for (const row of (result.data ?? []) as PublicTicket[]) byId.set(row.id, row);
+    }
+
+    // Most-supported first: that is the whole point of upvoting.
+    return [...byId.values()].sort(
+      (a, b) =>
+        b.upvote_count - a.upvote_count ||
+        Date.parse(b.created_at) - Date.parse(a.created_at),
+    );
   }
 
   /**
