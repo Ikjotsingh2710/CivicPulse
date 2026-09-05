@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/auth.service';
@@ -22,13 +23,52 @@ import type { PublicTicket, TicketStatus } from '../../core/models';
 @Component({
   selector: 'cp-issues-page',
   standalone: true,
-  imports: [RouterLink, DatePipe, PhotoZoom],
+  imports: [RouterLink, DatePipe, PhotoZoom, FormsModule],
   template: `
     <div class="page">
       <h1>Issues in {{ label() }}</h1>
+
+      <!-- Searching here rather than only from the nav popover: this is the
+           page people land on, and the one they retype a search into. -->
+      <form class="finder card" (ngSubmit)="search()">
+        <div class="modes" role="tablist" aria-label="Search by">
+          <button
+            type="button"
+            role="tab"
+            [class.active]="mode() === 'city'"
+            [attr.aria-selected]="mode() === 'city'"
+            (click)="mode.set('city')"
+          >
+            City
+          </button>
+          <button
+            type="button"
+            role="tab"
+            [class.active]="mode() === 'pincode'"
+            [attr.aria-selected]="mode() === 'pincode'"
+            (click)="mode.set('pincode')"
+          >
+            Pincode
+          </button>
+        </div>
+
+        <input
+          name="q"
+          [(ngModel)]="query"
+          [placeholder]="mode() === 'city' ? 'e.g. New Delhi, Meerut' : 'e.g. 110042'"
+          [attr.inputmode]="mode() === 'pincode' ? 'numeric' : 'text'"
+          aria-label="Search a city or pincode"
+        />
+        <button class="btn-primary" type="submit">Search</button>
+      </form>
+
       <p class="muted lead">
-        Showing reports filed against “{{ label() }}” and its
-        {{ wards().length }} {{ wards().length === 1 ? 'campus' : 'campuses' }}.
+        @if (term()) {
+          Reports filed against “{{ term() }}” and its
+          {{ wards().length }} {{ wards().length === 1 ? 'campus' : 'campuses' }}.
+        } @else {
+          The most recent reports from every region. Search above to narrow it down.
+        }
       </p>
 
       @if (!auth.isAuthenticated()) {
@@ -48,8 +88,8 @@ import type { PublicTicket, TicketStatus } from '../../core/models';
         <div class="card empty">
           <h2>Nothing reported here yet</h2>
           <p class="muted">
-            No reports match “{{ label() }}”. Try a broader search — “Delhi” instead of a
-            specific campus — or be the first to report something.
+            No reports match “{{ label() }}”. Try something broader — “Delhi” rather than a
+            specific campus — or be the first to report it.
           </p>
           <a class="btn-primary link-btn" routerLink="/">Report an issue</a>
         </div>
@@ -108,8 +148,48 @@ import type { PublicTicket, TicketStatus } from '../../core/models';
   `,
   styles: `
     .lead {
-      margin-top: -6px;
       margin-bottom: 20px;
+    }
+
+    .finder {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 14px 0 14px;
+      padding: 12px;
+    }
+
+    .finder input {
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .modes {
+      display: flex;
+      gap: 4px;
+      background: var(--surface-sunken);
+      border-radius: 9px;
+      padding: 3px;
+    }
+
+    .modes button {
+      appearance: none;
+      border: none;
+      background: none;
+      border-radius: 7px;
+      padding: 7px 13px;
+      font-family: var(--font-body);
+      font-size: 0.86rem;
+      font-weight: 600;
+      color: var(--ink-muted);
+      cursor: pointer;
+    }
+
+    .modes button.active {
+      background: var(--surface-elevated);
+      color: var(--accent-strong);
+      box-shadow: var(--shadow-elevated);
     }
 
     .empty {
@@ -270,7 +350,11 @@ export class IssuesPage {
   protected readonly label = signal('your region');
   protected readonly wards = signal<string[]>([]);
   /** The raw search text, matched against ward_location case-insensitively. */
-  private readonly term = signal('');
+  protected readonly term = signal('');
+
+  /** Bound to the on-page search box. */
+  protected readonly mode = signal<'city' | 'pincode'>('city');
+  protected query = '';
 
   constructor() {
     this.route.queryParamMap.subscribe((params) => {
@@ -279,16 +363,51 @@ export class IssuesPage {
 
       this.label.set(city || pincode || 'your region');
 
+      // `''.includes('')` is true, so an empty search used to match all 26
+      // campuses and claim it had searched them.
       const matched = INSTITUTIONS.filter((institution) =>
         pincode
           ? institution.pincode.startsWith(pincode)
-          : institution.city.toLowerCase().includes(city.toLowerCase()),
+          : city !== '' && institution.city.toLowerCase().includes(city.toLowerCase()),
       ).map((institution) => institution.name);
 
       this.wards.set(matched);
       this.term.set(pincode || city);
+
+      // Keep the box showing what produced these results, so refining a search
+      // means editing the term rather than retyping it.
+      this.query = pincode || city;
+      this.mode.set(pincode ? 'pincode' : 'city');
+
       void this.load(this.term(), matched);
     });
+  }
+
+  /**
+   * Re-runs the search from the on-page box.
+   *
+   * Navigating to the URL we are already on would not re-emit queryParamMap,
+   * so an unchanged term would appear to do nothing. Loading directly covers
+   * that case; the URL is still updated so the search stays shareable.
+   */
+  protected search(): void {
+    const q = this.query.trim();
+
+    void this.router.navigate(['/issues'], {
+      queryParams: q ? { [this.mode()]: q } : {},
+      replaceUrl: true,
+    });
+
+    const matched = INSTITUTIONS.filter((institution) =>
+      this.mode() === 'pincode'
+        ? institution.pincode.startsWith(q)
+        : q !== '' && institution.city.toLowerCase().includes(q.toLowerCase()),
+    ).map((institution) => institution.name);
+
+    this.label.set(q || 'your region');
+    this.term.set(q);
+    this.wards.set(matched);
+    void this.load(q, matched);
   }
 
   protected pill(status: TicketStatus): string {

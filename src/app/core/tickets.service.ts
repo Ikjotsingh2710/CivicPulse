@@ -132,7 +132,17 @@ export class TicketsService {
       requests.push(select().in('ward_location', wards as string[]));
     }
 
-    if (requests.length === 0) return [];
+    // No search at all — someone opened /issues directly. Showing the most
+    // recent reports everywhere beats an empty page that looks broken.
+    if (requests.length === 0) {
+      const { data, error } = await select()
+        .order('upvote_count', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw new Error(describeSupabaseError(error, 'Could not load reports.'));
+      return (data ?? []) as PublicTicket[];
+    }
 
     const results = await Promise.all(requests);
 
