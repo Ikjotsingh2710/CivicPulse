@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/civicpulse/browser",
+  "rewrites": [
+    {
+      "comment": "Angular routes like /admin and /pulse-points exist only in the browser. Without this, a refresh or a shared link 404s, because there is no such file on disk. Vercel serves a real file when one matches and falls through to here when none does, so hashed assets are unaffected.",
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

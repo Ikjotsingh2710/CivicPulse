@@ -1,0 +1,507 @@
+/* CivicPulse — global tokens and primitives.
+   Palette is deliberately slate + emerald + amber; no default framework blue. */
+
+:root {
+  /* Surfaces — base → elevated → floating z-plane */
+  --surface-base: #f6f7f5;
+  --surface-elevated: #ffffff;
+  --surface-sunken: #ecefea;
+  --surface-inverse: #12181a;
+
+  /* Ink */
+  --ink-strong: #12181a;
+  --ink: #2c3a3d;
+  --ink-muted: #64757a;
+  --ink-inverse: #f2f5f2;
+
+  /* Brand */
+  --accent: #0f7a5a;
+  --accent-strong: #0a5c43;
+  --accent-soft: #e2f2ec;
+  --warn: #b06a10;
+  --warn-soft: #fdf1dd;
+  --danger: #a52f2f;
+  --danger-soft: #fbe9e7;
+
+  /* Dark slate — secondary dark for controls off the green ground */
+  --slate: #1e272b;
+  --slate-hover: #2a373c;
+
+  /* Deep green, in the register of a Rolex dial: near-black in shadow,
+     saturated where light hits it. The hero is built entirely from these. */
+  --green-950: #02180f;
+  --green-900: #04241a;
+  --green-800: #063324;
+  --green-700: #06432d;
+  --green-600: #056039;
+  --green-500: #0a7347;
+  --green-line: rgba(160, 226, 190, 0.14);
+
+  /* The backdrop map's palette. Kept in sync with PALETTE in
+     shared/map-backdrop.ts — the SVG needs literal values, so anything that
+     sits next to the map reads its colours from here instead. */
+  --map-land: #16242c;
+  --map-land-alt: #1a2f38;
+  --map-green: #17403a;
+  --map-green-deep: #123430;
+  --map-water: #070f13;
+  --map-road: #aab4cc;
+  --map-road-minor: #5f6d84;
+  --map-route: #3ddc84;
+
+  /* Champagne, used only for hairlines and small marks */
+  --gold: #c8a65b;
+  --gold-soft: rgba(200, 166, 91, 0.16);
+
+  /* Warm paper, the cream half of the palette */
+  --cream: #f3efe6;
+  --cream-dim: rgba(243, 239, 230, 0.66);
+
+
+  --line: #dbe1dc;
+  --line-strong: #c2ccc4;
+
+  /* Layered, colour-tinted depth */
+  --shadow-elevated:
+    0 1px 2px rgba(18, 24, 26, 0.05), 0 4px 12px -4px rgba(15, 122, 90, 0.12);
+  --shadow-floating:
+    0 2px 4px rgba(18, 24, 26, 0.06), 0 12px 32px -8px rgba(15, 122, 90, 0.2),
+    0 24px 56px -20px rgba(18, 24, 26, 0.18);
+
+  --radius: 12px;
+  --radius-lg: 18px;
+
+  /* Headings carry Plus Jakarta Sans' geometric flare; Inter's tall x-height
+     keeps the dense UI text (labels, coordinates, table rows) legible small. */
+  --font-display: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--surface-base);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  color: var(--ink-strong);
+  margin: 0 0 0.4em;
+  font-weight: 700;
+}
+
+h1 {
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+}
+
+h2 {
+  font-size: 1.32rem;
+  letter-spacing: -0.025em;
+}
+
+a {
+  color: var(--accent-strong);
+}
+
+/* ---------------------------------------------------------------- controls */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.field > label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: var(--ink-strong);
+  background: var(--surface-elevated);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 11px 13px;
+  width: 100%;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: var(--ink-muted);
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 92px;
+}
+
+button {
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  padding: 11px 18px;
+  transition:
+    transform 90ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--ink-inverse);
+  box-shadow: var(--shadow-elevated);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.btn-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--surface-sunken);
+  border-color: var(--ink-muted);
+}
+
+.btn-ghost:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn-ghost:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ------------------------------------------------------------------ layout */
+
+.card {
+  background: var(--surface-elevated);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-elevated);
+  padding: 22px;
+}
+
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 28px 20px 64px;
+}
+
+.muted {
+  color: var(--ink-muted);
+}
+
+.alert {
+  border-radius: var(--radius);
+  padding: 10px 13px;
+  font-size: 0.9rem;
+  margin-bottom: 14px;
+}
+
+.alert-error {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid rgba(165, 47, 47, 0.22);
+}
+
+.alert-ok {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  border: 1px solid rgba(15, 122, 90, 0.22);
+}
+
+.pill {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.pill-submitted {
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+}
+
+.pill-progress {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.pill-resolved {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.pill-high {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* ---------------------------------------------------------------- dropdowns */
+
+.btn-slate {
+  background: var(--slate);
+  color: var(--ink-inverse);
+  box-shadow: var(--shadow-elevated);
+}
+
+.btn-slate:hover:not(:disabled) {
+  background: var(--slate-hover);
+}
+
+.btn-slate:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.btn-slate:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(30, 39, 43, 0.18);
+}
+
+/* Layered, low-opacity depth for any open dropdown surface. */
+.dropdown-card {
+  position: absolute;
+  z-index: 40;
+  background: var(--surface-elevated);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow:
+    0 1px 2px rgba(18, 24, 26, 0.04),
+    0 8px 20px -6px rgba(18, 24, 26, 0.12),
+    0 20px 44px -16px rgba(18, 24, 26, 0.16);
+  animation: dropdown-in 150ms ease forwards;
+}
+
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dropdown-card {
+    animation: none;
+  }
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.dropdown-item:hover {
+  background: var(--surface-sunken);
+  color: var(--ink-strong);
+}
+
+.dropdown-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* -------------------------------------------------------------- map blips */
+/* The backdrop's SVG nodes are built in script, so they carry none of the
+   attributes Angular's style encapsulation needs — these have to be global.
+   transform-box makes scale() pivot on each circle rather than the SVG origin. */
+
+.cp-blip-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cp-blip-pulse 3.4s ease-out infinite;
+}
+
+.cp-blip-core {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cp-blip-breathe 3.4s ease-in-out infinite;
+}
+
+/* Peak and base opacity come from custom properties so one keyframe serves
+   both intensities — the animation would otherwise override any static
+   opacity set on the strong variant. */
+.cp-blip-halo {
+  --blip-base: 0.2;
+  --blip-peak: 0.44;
+  transform-box: fill-box;
+  transform-origin: center;
+  filter: blur(7px);
+  animation: cp-blip-glow 3.4s ease-in-out infinite;
+}
+
+.cp-blip-halo-strong {
+  --blip-base: 0.32;
+  --blip-peak: 0.66;
+  filter: blur(10px);
+}
+
+@keyframes cp-blip-glow {
+  0%,
+  100% {
+    transform: scale(0.8);
+    opacity: var(--blip-base);
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: var(--blip-peak);
+  }
+}
+
+@keyframes cp-blip-pulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.85;
+  }
+  70%,
+  100% {
+    transform: scale(3.4);
+    opacity: 0;
+  }
+}
+
+@keyframes cp-blip-breathe {
+  0%,
+  100% {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-blip-ring {
+    animation: none;
+    opacity: 0.3;
+  }
+
+  .cp-blip-core {
+    animation: none;
+  }
+
+  /* The glow stays — it is the part that reads as a live marker at a glance. */
+  .cp-blip-halo {
+    animation: none;
+    opacity: var(--blip-peak);
+  }
+}
+
+/* ------------------------------------------------------------ map pointer */
+/* MapLibre builds marker elements outside Angular's view encapsulation, so
+   these have to live in the global sheet. */
+
+.cp-map-pointer {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--green-500);
+  border: 2px solid var(--cream);
+  box-shadow: 0 0 18px 4px rgba(10, 115, 71, 0.75);
+  position: relative;
+}
+
+.cp-map-ping {
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(200, 166, 91, 0.7);
+  animation: cp-ping 2.8s ease-out infinite;
+}
+
+@keyframes cp-ping {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.95;
+  }
+  70%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-map-ping {
+    animation: none;
+  }
+}

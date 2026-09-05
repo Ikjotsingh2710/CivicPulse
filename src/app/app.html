@@ -1,0 +1,195 @@
+@if (showNav()) {
+  <header class="app-bar" [class.on-dark]="onDark()">
+    <a class="brand" routerLink="/">CivicPulse</a>
+
+    <nav class="center">
+      <!-- Hover-revealed; :focus-within keeps it reachable by keyboard. -->
+      <div class="menu">
+        <button type="button" class="trigger" aria-haspopup="true">
+          Report Issue <span class="caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="dropdown-card menu-panel">
+          <button type="button" class="dropdown-item" (click)="snapLivePhoto()">
+            <span class="item-title">Snap Live Photo</span>
+            <span class="item-sub">Opens the camera at the scene</span>
+          </button>
+          <a class="dropdown-item" routerLink="/report">
+            <span class="item-title">Quick Alert</span>
+            <span class="item-sub">Full report with category and ward</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="menu popover-host">
+        <button
+          type="button"
+          class="trigger"
+          aria-haspopup="true"
+          [attr.aria-expanded]="regionOpen()"
+          (click)="toggleRegion()"
+        >
+          Issues by Region <span class="caret" aria-hidden="true">▾</span>
+        </button>
+
+        @if (regionOpen()) {
+          <div class="dropdown-card menu-panel region">
+            <p class="region-label">Search by</p>
+            <div class="modes">
+              <button
+                type="button"
+                class="mode"
+                [class.active]="regionMode() === 'city'"
+                (click)="setRegionMode('city')"
+              >
+                City name
+              </button>
+              <button
+                type="button"
+                class="mode"
+                [class.active]="regionMode() === 'pincode'"
+                (click)="setRegionMode('pincode')"
+              >
+                Pincode
+              </button>
+            </div>
+
+            <form class="region-form" (ngSubmit)="searchRegion()">
+              <input
+                name="regionQuery"
+                [(ngModel)]="regionQuery"
+                [placeholder]="regionMode() === 'city' ? 'e.g. New Delhi' : 'e.g. 110042'"
+                [attr.inputmode]="regionMode() === 'pincode' ? 'numeric' : 'text'"
+                aria-label="Region search"
+              />
+              <button class="btn-slate" type="submit">Search</button>
+            </form>
+          </div>
+        }
+      </div>
+    </nav>
+
+    <div class="right popover-host">
+      <button
+        type="button"
+        class="phone-btn"
+        [attr.aria-expanded]="profileOpen()"
+        aria-label="Your account"
+        (click)="toggleProfile()"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
+          <path
+            d="M7 2.5h10a1.5 1.5 0 0 1 1.5 1.5v16a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 20V4A1.5 1.5 0 0 1 7 2.5Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+          />
+          <path d="M10.5 18.6h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+        </svg>
+      </button>
+
+      @if (profileOpen()) {
+        <div class="dropdown-card profile-card">
+          @if (auth.isAuthenticated()) {
+            <!-- Header row -->
+            <div class="pc-head">
+              <div class="pc-id">
+                <p class="pc-name">{{ auth.fullName() || 'Your account' }}</p>
+                <p class="pc-phone">{{ phoneDisplay() }}</p>
+              </div>
+              <span class="pc-session" title="You have a valid session on this device">
+                <span class="pc-dot" aria-hidden="true"></span> Active Session
+              </span>
+            </div>
+
+            <!-- Quick status overview -->
+            <div class="pc-stats">
+              <div class="pc-stat">
+                <p class="pc-stat-value">{{ countsLoading() ? '—' : counts().active }}</p>
+                <p class="pc-stat-label">Active complaints</p>
+              </div>
+              <div class="pc-stat">
+                <p class="pc-stat-value resolved">
+                  {{ countsLoading() ? '—' : counts().resolved }}
+                </p>
+                <p class="pc-stat-label">Resolved</p>
+              </div>
+            </div>
+
+            @if (countsError(); as message) {
+              <p class="pc-error">{{ message }}</p>
+            }
+
+            <!-- Navigation actions -->
+            <nav class="pc-links">
+              <a class="pc-link" routerLink="/profile" routerLinkActive="active">
+                <span class="pc-icon" aria-hidden="true">📋</span>
+                <span>
+                  <span class="pc-link-title">My Complaints</span>
+                  <span class="pc-link-sub">Full activity history</span>
+                </span>
+              </a>
+
+              <a class="pc-link" routerLink="/escalations" routerLinkActive="active">
+                <span class="pc-icon" aria-hidden="true">⚡</span>
+                <span>
+                  <span class="pc-link-title">Ticket Escalations</span>
+                  <span class="pc-link-sub">24-hour auto-escalation status</span>
+                </span>
+              </a>
+
+              <a class="pc-link" routerLink="/resolved" routerLinkActive="active">
+                <span class="pc-icon" aria-hidden="true">🖼️</span>
+                <span>
+                  <span class="pc-link-title">Resolved Photos</span>
+                  <span class="pc-link-sub">Before &amp; after proof from the desk</span>
+                </span>
+              </a>
+
+              <a class="pc-link" routerLink="/pulse-points" routerLinkActive="active">
+                <span class="pc-icon" aria-hidden="true">🪙</span>
+                <span>
+                  <span class="pc-link-title">Pulse Points</span>
+                  <span class="pc-link-sub">Earn points, claim rewards</span>
+                </span>
+              </a>
+
+              <a class="pc-link" routerLink="/security" routerLinkActive="active">
+                <span class="pc-icon" aria-hidden="true">🔒</span>
+                <span>
+                  <span class="pc-link-title">Security Settings</span>
+                  <span class="pc-link-sub">Password &amp; account security</span>
+                </span>
+              </a>
+
+              @if (auth.isAdmin()) {
+                <a class="pc-link" routerLink="/admin" routerLinkActive="active">
+                  <span class="pc-icon" aria-hidden="true">🛠️</span>
+                  <span>
+                    <span class="pc-link-title">Control Desk</span>
+                    <span class="pc-link-sub">Reports, feedback &amp; citizens</span>
+                  </span>
+                </a>
+              }
+            </nav>
+
+            <!-- Footer action -->
+            <button type="button" class="pc-signout" (click)="signOut()">
+              <span aria-hidden="true">🚪</span> Sign Out
+            </button>
+          } @else {
+            <p class="card-label">Not signed in</p>
+            <p class="card-name">Sign in with your phone number to file and track reports.</p>
+            <div class="card-links">
+              <a class="dropdown-item" routerLink="/auth">Sign in or register</a>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </header>
+}
+
+<router-outlet />
+
+<!-- Mounted once for the whole app; any photo marked cpZoom opens in here. -->
+<cp-photo-lightbox />
