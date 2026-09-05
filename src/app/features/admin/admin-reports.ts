@@ -214,6 +214,36 @@ import {
               @if (ticket.resolution_image_url) {
                 <img cpZoom class="proof" [cpPhoto]="ticket.resolution_image_url" alt="Resolution proof" />
               }
+
+              <!-- Kept quiet and last. Rejecting is the normal way to close a
+                   bad report, because it leaves the citizen an explanation.
+                   This is for content that should not stay on the record. -->
+              @if (deletingId() === ticket.id) {
+                <div class="danger-zone">
+                  <p class="dz-head">Delete permanently?</p>
+                  <p class="dz-why">
+                    The report and its photos are erased for good. The citizen will see no
+                    reason — reject instead if they deserve one.
+                  </p>
+                  <div class="reject-row">
+                    <button type="button" class="btn-ghost" (click)="deletingId.set(null)">
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-danger"
+                      (click)="confirmDelete(ticket)"
+                      [disabled]="pendingId() === ticket.id"
+                    >
+                      {{ pendingId() === ticket.id ? 'Deleting…' : 'Delete' }}
+                    </button>
+                  </div>
+                </div>
+              } @else {
+                <button type="button" class="dz-open" (click)="deletingId.set(ticket.id)">
+                  Delete permanently
+                </button>
+              }
             </div>
           </article>
         }
@@ -364,6 +394,65 @@ import {
       color: var(--ink-strong);
     }
 
+    /* Deliberately the quietest control in the panel — a plain text button, no
+       fill, no border. Destructive actions should be findable, not inviting. */
+    .dz-open {
+      width: 100%;
+      margin-top: 14px;
+      padding: 7px;
+      background: none;
+      border: none;
+      font-family: var(--font-body);
+      font-size: 0.8rem;
+      color: var(--ink-muted);
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .dz-open:hover {
+      color: var(--danger);
+    }
+
+    .danger-zone {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--danger);
+      background: var(--danger-soft);
+    }
+
+    .dz-head {
+      margin: 0 0 4px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.92rem;
+      color: var(--danger);
+    }
+
+    .dz-why {
+      margin: 0;
+      font-size: 0.8rem;
+      color: var(--ink-strong);
+    }
+
+    .btn-danger {
+      border: 1px solid var(--danger);
+      background: var(--danger);
+      color: #fff;
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 0.88rem;
+      padding: 9px 14px;
+      border-radius: var(--radius);
+      cursor: pointer;
+    }
+
+    .btn-danger:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
     .proof {
       margin-top: 12px;
       width: 100%;
@@ -403,6 +492,8 @@ export class AdminReports {
 
   /** Which ticket has its reject panel open; only ever one at a time. */
   protected readonly rejectingId = signal<string | null>(null);
+  /** Which ticket is showing its delete confirmation. */
+  protected readonly deletingId = signal<string | null>(null);
   protected readonly rejectReason = signal<string>(REJECTION_REASONS[0]);
 
   constructor() {
@@ -523,6 +614,22 @@ export class AdminReports {
       this.replace(await this.service.updateStatus(ticket.id, 'Submitted'));
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Could not reopen the report.');
+    } finally {
+      this.pendingId.set(null);
+    }
+  }
+
+  /** Irreversible: erases the report and its photographs. */
+  protected async confirmDelete(ticket: GrievanceTicket): Promise<void> {
+    this.pendingId.set(ticket.id);
+    this.error.set(null);
+
+    try {
+      await this.service.deleteForever(ticket);
+      this.tickets.update((list) => list.filter((row) => row.id !== ticket.id));
+      this.deletingId.set(null);
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Could not delete the report.');
     } finally {
       this.pendingId.set(null);
     }

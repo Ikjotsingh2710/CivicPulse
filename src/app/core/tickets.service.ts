@@ -310,6 +310,29 @@ export class TicketsService {
     return data;
   }
 
+  /**
+   * Admin-only: removes a report and its photographs for good.
+   *
+   * The normal way to close a bad report is `reject()`, which keeps the record
+   * so the citizen can read why. This is the rarer case — content that should
+   * not remain on the record at all — and it is irreversible.
+   *
+   * Files go first, because once the row is deleted nothing knows their paths.
+   * If a file delete fails the row is still removed, and the orphan is inert:
+   * the storage policy grants access only to an object some report still points
+   * at, so a file with no report is unreadable by everyone.
+   */
+  async deleteForever(ticket: GrievanceTicket): Promise<void> {
+    const files = [ticket.image_url, ticket.resolution_image_url].filter(
+      (value): value is string => Boolean(value),
+    );
+
+    await Promise.all(files.map((file) => this.media.remove(file)));
+
+    const { error } = await supabase.from('grievance_tickets').delete().eq('id', ticket.id);
+    if (error) throw new Error(describeSupabaseError(error, 'Could not delete the report.'));
+  }
+
   /** Admin-only: attaches the "after" resolution proof photo. */
   async attachResolutionPhoto(id: string, url: string): Promise<GrievanceTicket> {
     const { data, error } = await supabase
