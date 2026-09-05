@@ -6,6 +6,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { TicketsService } from '../../core/tickets.service';
 import { PhotoZoom } from '../../shared/photo-zoom';
+import { PhotoSrc } from '../../shared/photo-src';
 import { INSTITUTIONS } from '../../core/institutions';
 import type { PublicTicket, TicketStatus } from '../../core/models';
 
@@ -23,7 +24,7 @@ import type { PublicTicket, TicketStatus } from '../../core/models';
 @Component({
   selector: 'cp-issues-page',
   standalone: true,
-  imports: [RouterLink, DatePipe, PhotoZoom, FormsModule],
+  imports: [RouterLink, DatePipe, PhotoZoom, FormsModule, PhotoSrc],
   template: `
     <div class="page">
       <h1>Issues in {{ label() }}</h1>
@@ -100,7 +101,7 @@ import type { PublicTicket, TicketStatus } from '../../core/models';
               <!-- A photo nobody has reviewed is not published. The report
                    still shows, so it can still be backed while it is checked. -->
               @if (ticket.image_url; as photo) {
-                <img cpZoom [src]="photo" [alt]="'Reported ' + ticket.category" />
+                <img cpZoom [cpPhoto]="photo" [alt]="'Reported ' + ticket.category" />
               } @else {
                 <div class="pending" role="img" aria-label="Photo awaiting review">
                   <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">

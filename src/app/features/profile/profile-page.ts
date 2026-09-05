@@ -5,12 +5,13 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { TicketsService } from '../../core/tickets.service';
 import { PhotoZoom } from '../../shared/photo-zoom';
+import { PhotoSrc } from '../../shared/photo-src';
 import { TICKET_PIPELINE, type GrievanceTicket, type TicketStatus } from '../../core/models';
 
 @Component({
   selector: 'cp-profile-page',
   standalone: true,
-  imports: [RouterLink, DatePipe, PhotoZoom],
+  imports: [RouterLink, DatePipe, PhotoZoom, PhotoSrc],
   template: `
     <div class="page">
       <header class="head">
@@ -84,12 +85,12 @@ import { TICKET_PIPELINE, type GrievanceTicket, type TicketStatus } from '../../
 
               <div class="photos">
                 <figure>
-                  <img cpZoom [src]="ticket.image_url" [alt]="'Reported ' + ticket.category" />
+                  <img cpZoom [cpPhoto]="ticket.image_url" [alt]="'Reported ' + ticket.category" />
                   <figcaption class="muted">Before</figcaption>
                 </figure>
                 @if (ticket.resolution_image_url) {
                   <figure>
-                    <img cpZoom [src]="ticket.resolution_image_url" alt="Resolution proof" />
+                    <img cpZoom [cpPhoto]="ticket.resolution_image_url" alt="Resolution proof" />
                     <figcaption class="muted">After</figcaption>
                   </figure>
                 }

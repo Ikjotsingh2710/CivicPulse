@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 
 import { MediaService } from '../../core/media.service';
 import { PhotoZoom } from '../../shared/photo-zoom';
+import { PhotoSrc } from '../../shared/photo-src';
 import { TicketsService, type AdminTicketFilters } from '../../core/tickets.service';
 import { downloadCsv } from './csv';
 import {
@@ -24,7 +25,7 @@ import {
 @Component({
   selector: 'cp-admin-reports',
   standalone: true,
-  imports: [FormsModule, DatePipe, PhotoZoom],
+  imports: [FormsModule, DatePipe, PhotoZoom, PhotoSrc],
   template: `
     <section class="card filters">
       <div class="field">
@@ -93,7 +94,7 @@ import {
             <img
               cpZoom
               class="thumb"
-              [src]="ticket.image_url"
+              [cpPhoto]="ticket.image_url"
               [alt]="'Reported ' + ticket.category"
             />
 
@@ -211,7 +212,7 @@ import {
               }
 
               @if (ticket.resolution_image_url) {
-                <img cpZoom class="proof" [src]="ticket.resolution_image_url" alt="Resolution proof" />
+                <img cpZoom class="proof" [cpPhoto]="ticket.resolution_image_url" alt="Resolution proof" />
               }
             </div>
           </article>

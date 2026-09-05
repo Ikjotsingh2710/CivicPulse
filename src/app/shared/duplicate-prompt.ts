@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, input, output } from '@angular/core';
 
+import { PhotoSrc } from './photo-src';
 import type { DuplicateMatch } from '../core/models';
 
 /**
@@ -16,7 +17,7 @@ import type { DuplicateMatch } from '../core/models';
 @Component({
   selector: 'cp-duplicate-prompt',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, PhotoSrc],
   template: `
     <div class="scrim" role="dialog" aria-modal="true" aria-labelledby="dup-title">
       <div class="sheet card">
@@ -27,7 +28,7 @@ import type { DuplicateMatch } from '../core/models';
         </p>
 
         <article class="match">
-          <img [src]="match().image_url" [alt]="'Reported ' + match().category" />
+          <img [cpPhoto]="match().image_url" [alt]="'Reported ' + match().category" />
           <div>
             <p class="number">{{ match().ticket_number }}</p>
             <h3>{{ match().category }}</h3>

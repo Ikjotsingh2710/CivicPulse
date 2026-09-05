@@ -39,14 +39,19 @@ export class MediaService {
    * report the desk could not close is not.
    */
   async remove(url: string): Promise<{ removed: boolean; reason?: string }> {
-    const marker = `/object/public/${BUCKET}/`;
-    const at = url.indexOf(marker);
+    let path: string;
 
-    if (at === -1) {
-      return { removed: false, reason: 'Not stored in Supabase — delete it at the host.' };
+    if (/^https?:/.test(url)) {
+      // A row written before 0013, or a Cloudinary upload we cannot delete.
+      const marker = `/object/public/${BUCKET}/`;
+      const at = url.indexOf(marker);
+      if (at === -1) {
+        return { removed: false, reason: 'Not stored in Supabase — delete it at the host.' };
+      }
+      path = decodeURIComponent(url.slice(at + marker.length).split('?')[0]);
+    } else {
+      path = url;
     }
-
-    const path = decodeURIComponent(url.slice(at + marker.length).split('?')[0]);
     const { error } = await supabase.storage.from(BUCKET).remove([path]);
 
     if (error) return { removed: false, reason: describeSupabaseError(error, 'Delete failed.') };
@@ -85,6 +90,9 @@ export class MediaService {
 
     if (error) throw new Error(describeSupabaseError(error, 'Photo upload failed.'));
 
-    return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+    // The object path, not a public URL. Since 0013 the bucket is private, so
+    // there is no permanent address to store — PhotoService mints a signed URL
+    // per view, and only for someone the database says may see it.
+    return path;
   }
 }

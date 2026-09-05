@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 
 import { TicketsService } from '../../core/tickets.service';
 import { PhotoZoom } from '../../shared/photo-zoom';
+import { PhotoSrc } from '../../shared/photo-src';
 import type { GrievanceTicket } from '../../core/models';
 
 /**
@@ -15,7 +16,7 @@ import type { GrievanceTicket } from '../../core/models';
 @Component({
   selector: 'cp-resolved-page',
   standalone: true,
-  imports: [RouterLink, DatePipe, PhotoZoom],
+  imports: [RouterLink, DatePipe, PhotoZoom, PhotoSrc],
   template: `
     <div class="page">
       <header class="head">
@@ -60,13 +61,13 @@ import type { GrievanceTicket } from '../../core/models';
 
               <div class="pair">
                 <figure>
-                  <img cpZoom [src]="ticket.image_url" [alt]="'Reported ' + ticket.category" />
+                  <img cpZoom [cpPhoto]="ticket.image_url" [alt]="'Reported ' + ticket.category" />
                   <figcaption>Before</figcaption>
                 </figure>
 
                 @if (ticket.resolution_image_url; as after) {
                   <figure>
-                    <img cpZoom [src]="after" alt="Resolution proof photo" />
+                    <img cpZoom [cpPhoto]="after" alt="Resolution proof photo" />
                     <figcaption class="after">After</figcaption>
                   </figure>
                 } @else {
