@@ -168,6 +168,18 @@
                     <span class="pc-link-title">Control Desk</span>
                     <span class="pc-link-sub">Reports, feedback &amp; citizens</span>
                   </span>
+
+                  <!-- Unhandled reports. Absent rather than "0" when the queue
+                       is clear, so a badge always means there is work. -->
+                  @if (notifications.pending() > 0) {
+                    <span
+                      class="pc-badge"
+                      [attr.aria-label]="
+                        notifications.pending() + ' reports waiting to be handled'
+                      "
+                      >{{ notifications.pending() }}</span
+                    >
+                  }
                 </a>
               }
             </nav>
@@ -193,3 +205,6 @@
 
 <!-- Mounted once for the whole app; any photo marked cpZoom opens in here. -->
 <cp-photo-lightbox />
+
+<!-- Ward-desk alert when a new report arrives. Renders nothing for citizens. -->
+<cp-report-toast />

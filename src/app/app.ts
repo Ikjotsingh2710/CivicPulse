@@ -5,17 +5,27 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { AuthService, formatPhone } from './core/auth.service';
 import { TicketsService } from './core/tickets.service';
 import { PhotoLightbox } from './shared/photo-lightbox';
+import { ReportToast } from './shared/report-toast';
+import { NotificationsService } from './core/notifications.service';
 
 type RegionMode = 'city' | 'pincode';
 
 @Component({
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, FormsModule, PhotoLightbox],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    FormsModule,
+    PhotoLightbox,
+    ReportToast,
+  ],
   selector: 'app-root',
   styleUrl: './app.scss',
   templateUrl: './app.html',
 })
 export class App {
   protected readonly auth = inject(AuthService);
+  protected readonly notifications = inject(NotificationsService);
   private readonly tickets = inject(TicketsService);
   private readonly router = inject(Router);
 
@@ -44,6 +54,10 @@ export class App {
         this.onDark.set(url === '/' || url.startsWith('/?'));
         this.profileOpen.set(false);
         this.regionOpen.set(false);
+
+        // Admin status is only known once the session has loaded, so this is
+        // the earliest reliable point to begin watching. start() is idempotent.
+        this.notifications.start();
       }
     });
   }
@@ -70,7 +84,10 @@ export class App {
     this.regionOpen.set(false);
 
     // Refetched on every open so the totals cannot go stale behind the panel.
-    if (opening && this.auth.isAuthenticated()) void this.loadCounts();
+    if (opening && this.auth.isAuthenticated()) {
+      void this.loadCounts();
+      void this.notifications.refresh();
+    }
   }
 
   private async loadCounts(): Promise<void> {
@@ -113,6 +130,8 @@ export class App {
 
   protected async signOut(): Promise<void> {
     this.profileOpen.set(false);
+    // Otherwise the next person to sign in on this device inherits the count.
+    this.notifications.stop();
     await this.auth.signOut();
     await this.router.navigateByUrl('/auth');
   }
