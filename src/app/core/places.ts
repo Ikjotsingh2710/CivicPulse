@@ -27,6 +27,10 @@ export interface City {
  * finds theirs. Adding to this list is safe; renaming an entry is not, because
  * existing tickets store the name as text.
  */
+// "Delhi" is deliberately absent: it and "New Delhi" are one place, and
+// offering both produced reports split across two spellings of it. Typing
+// "delhi" still finds New Delhi, and migration 0011 collapses anything already
+// filed the other way.
 export const INDIAN_CITIES: readonly City[] = [
   { name: 'Agartala', state: 'Tripura' },
   { name: 'Agra', state: 'Uttar Pradesh' },
@@ -61,7 +65,6 @@ export const INDIAN_CITIES: readonly City[] = [
   { name: 'Darbhanga', state: 'Bihar' },
   { name: 'Davanagere', state: 'Karnataka' },
   { name: 'Dehradun', state: 'Uttarakhand' },
-  { name: 'Delhi', state: 'Delhi' },
   { name: 'Dhanbad', state: 'Jharkhand' },
   { name: 'Dibrugarh', state: 'Assam' },
   { name: 'Durgapur', state: 'West Bengal' },
