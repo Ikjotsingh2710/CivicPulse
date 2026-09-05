@@ -112,6 +112,8 @@ export interface GrievanceTicket {
   ward_location: string;
   image_url: string;
   status: TicketStatus;
+  /** How many other people said they have this problem too. */
+  upvote_count: number;
   /** Set only while `status` is 'Rejected'; a trigger clears it otherwise. */
   rejection_reason: string | null;
   resolution_image_url: string | null;
@@ -171,6 +173,46 @@ export interface Credentials {
 
 export interface Registration extends Credentials {
   fullName: string;
+}
+
+// ------------------------------------------------------ Public feed & upvotes
+
+/**
+ * A report as everyone else sees it — the column list of `public.public_tickets`.
+ *
+ * `user_name` is here and `user_phone` is deliberately not. Anyone, signed in
+ * or not, can read this; only the ward desk ever sees who to contact.
+ */
+export interface PublicTicket {
+  id: string;
+  ticket_number: string;
+  created_at: string;
+  category: string;
+  description: string | null;
+  urgency: TicketUrgency;
+  latitude: number | null;
+  longitude: number | null;
+  ward_location: string;
+  image_url: string;
+  status: TicketStatus;
+  upvote_count: number;
+  user_name: string | null;
+}
+
+/** A possible duplicate, returned by `find_duplicate_ticket()`. */
+export interface DuplicateMatch {
+  id: string;
+  ticket_number: string;
+  category: string;
+  description: string | null;
+  ward_location: string;
+  image_url: string;
+  status: TicketStatus;
+  created_at: string;
+  upvote_count: number;
+  user_name: string | null;
+  /** Metres from where the new photo was taken. */
+  distance_m: number;
 }
 
 // --------------------------------------------------------------- Pulse Points

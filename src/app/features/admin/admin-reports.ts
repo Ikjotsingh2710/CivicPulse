@@ -99,7 +99,16 @@ import {
 
             <div class="detail">
               <p class="number">{{ ticket.ticket_number }}</p>
-              <h2>{{ ticket.category }}</h2>
+              <h2>
+                {{ ticket.category }}
+                <!-- The queue is ordered by this, so it belongs beside the
+                     title rather than buried in the metadata line. -->
+                @if (ticket.upvote_count > 0) {
+                  <span class="weight" [class.loud]="ticket.upvote_count >= 5">
+                    ▲ {{ ticket.upvote_count + 1 }} affected
+                  </span>
+                }
+              </h2>
               <p class="muted meta">
                 {{ ticket.ward_location }} · {{ ticket.user_name || 'Citizen' }} ·
                 {{ ticket.user_phone }} · {{ ticket.created_at | date: 'd MMM y, h:mm a' }}
@@ -276,6 +285,26 @@ import {
     .meta {
       font-size: 0.82rem;
       margin: 0;
+    }
+
+    .weight {
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 8px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-family: var(--font-body);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+    }
+
+    /* Five or more people is no longer a nuisance report. */
+    .weight.loud {
+      background: var(--warn-soft);
+      color: var(--warn);
     }
 
     .body {

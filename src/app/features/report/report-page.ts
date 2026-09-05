@@ -7,10 +7,12 @@ import { AuthService } from '../../core/auth.service';
 import { MediaService } from '../../core/media.service';
 import { TicketsService } from '../../core/tickets.service';
 import { PhotoZoom } from '../../shared/photo-zoom';
+import { DuplicatePrompt } from '../../shared/duplicate-prompt';
 import {
   DESCRIPTION_LIMIT,
   TICKET_CATEGORIES,
   TICKET_URGENCIES,
+  type DuplicateMatch,
   type GrievanceTicket,
   type TicketUrgency,
 } from '../../core/models';
@@ -19,7 +21,7 @@ import { CameraCapture, type CapturedLocation } from '../../shared/camera-captur
 @Component({
   selector: 'cp-report-page',
   standalone: true,
-  imports: [FormsModule, RouterLink, DecimalPipe, CameraCapture, PhotoZoom],
+  imports: [FormsModule, RouterLink, DecimalPipe, CameraCapture, PhotoZoom, DuplicatePrompt],
   template: `
     <div class="page">
       <h1>File a report</h1>
@@ -150,6 +152,21 @@ import { CameraCapture, type CapturedLocation } from '../../shared/camera-captur
         (dismissed)="cameraOpen.set(false)"
       />
     }
+
+    @if (duplicate(); as match) {
+      <cp-duplicate-prompt
+        [match]="match"
+        [busy]="busy()"
+        (same)="backExisting()"
+        (different)="fileAnyway()"
+      />
+    }
+
+    @if (backed(); as number) {
+      <p class="alert alert-ok" role="status">
+        Added your voice to {{ number }} instead of filing a duplicate.
+      </p>
+    }
   `,
   styles: `
     .lead {
@@ -252,6 +269,11 @@ export class ReportPage {
   protected readonly error = signal<string | null>(null);
   protected readonly filed = signal<GrievanceTicket | null>(null);
 
+  /** A nearby open report this draft may duplicate; drives the prompt. */
+  protected readonly duplicate = signal<DuplicateMatch | null>(null);
+  /** Ticket number backed instead of filing, for the confirmation message. */
+  protected readonly backed = signal<string | null>(null);
+
   private photo: File | null = null;
 
   protected onCaptured(file: File): void {
@@ -309,25 +331,76 @@ export class ReportPage {
     this.error.set(null);
 
     try {
-      const imageUrl = await this.media.upload(this.photo, 'reports');
+      // Before the upload, so a duplicate never puts a second copy of the same
+      // pothole in storage.
+      const match = await this.tickets.findDuplicate(
+        this.category,
+        this.latitude(),
+        this.longitude(),
+      );
 
-      const ticket = await this.tickets.create({
-        category: this.category,
-        urgency: this.urgency,
-        ward_location: this.wardLocation.trim(),
-        description: this.description().trim().slice(0, DESCRIPTION_LIMIT) || null,
-        image_url: imageUrl,
-        latitude: this.latitude(),
-        longitude: this.longitude(),
-        department_email: this.departmentEmail.trim() || null,
-      });
+      if (match) {
+        this.duplicate.set(match);
+        return;
+      }
 
-      this.filed.set(ticket);
+      await this.createTicket();
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Could not file the report.');
     } finally {
       this.busy.set(false);
     }
+  }
+
+  /** "Yes, same problem" — back the existing report rather than duplicating it. */
+  protected async backExisting(): Promise<void> {
+    const match = this.duplicate();
+    if (!match || this.busy()) return;
+
+    this.busy.set(true);
+    this.error.set(null);
+
+    try {
+      await this.tickets.upvote(match.id);
+      this.backed.set(match.ticket_number);
+      this.duplicate.set(null);
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Could not add your upvote.');
+      this.duplicate.set(null);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  /** "Mine is different" — the citizen overrules the proximity guess. */
+  protected async fileAnyway(): Promise<void> {
+    this.duplicate.set(null);
+    this.busy.set(true);
+
+    try {
+      await this.createTicket();
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Could not file the report.');
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  private async createTicket(): Promise<void> {
+    const imageUrl = await this.media.upload(this.photo!, 'reports');
+
+    const ticket = await this.tickets.create({
+      category: this.category,
+      urgency: this.urgency,
+      ward_location: this.wardLocation.trim(),
+      description: this.description().trim().slice(0, DESCRIPTION_LIMIT) || null,
+      image_url: imageUrl,
+      latitude: this.latitude(),
+      longitude: this.longitude(),
+      department_email: this.departmentEmail.trim() || null,
+    });
+
+    this.filed.set(ticket);
   }
 
   protected fileAnother(): void {

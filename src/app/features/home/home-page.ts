@@ -14,10 +14,12 @@ import { AuthService } from '../../core/auth.service';
 import { MediaService } from '../../core/media.service';
 import { TicketsService } from '../../core/tickets.service';
 import { PhotoZoom } from '../../shared/photo-zoom';
+import { DuplicatePrompt } from '../../shared/duplicate-prompt';
 import {
   CATEGORY_OPTIONS,
   DESCRIPTION_LIMIT,
   DESCRIPTION_TEMPLATES,
+  type DuplicateMatch,
   type GrievanceTicket,
   type TicketCategory,
 } from '../../core/models';
@@ -29,7 +31,15 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
 @Component({
   selector: 'cp-home-page',
   standalone: true,
-  imports: [FormsModule, RouterLink, CameraCapture, MapBackdrop, FeedbackLauncher, PhotoZoom],
+  imports: [
+    FormsModule,
+    RouterLink,
+    CameraCapture,
+    MapBackdrop,
+    FeedbackLauncher,
+    PhotoZoom,
+    DuplicatePrompt,
+  ],
   template: `
     <section class="hero">
       <div class="map">
@@ -371,6 +381,21 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
         (dismissed)="cameraOpen.set(false)"
       />
     }
+
+      @if (duplicate(); as match) {
+        <cp-duplicate-prompt
+          [match]="match"
+          [busy]="busy()"
+          (same)="backExisting()"
+          (different)="fileAnyway()"
+        />
+      }
+
+      @if (backed(); as number) {
+        <p class="alert alert-ok" role="status">
+          Added your voice to {{ number }}. The ward desk sees it as affecting more people now.
+        </p>
+      }
   `,
   styles: `
     :host {
@@ -1257,6 +1282,11 @@ export class HomePage {
   protected readonly error = signal<string | null>(null);
   protected readonly filed = signal<GrievanceTicket | null>(null);
 
+  /** A nearby open report the draft may be a duplicate of; drives the prompt. */
+  protected readonly duplicate = signal<DuplicateMatch | null>(null);
+  /** Ticket number the citizen backed instead of filing, for the confirmation. */
+  protected readonly backed = signal<string | null>(null);
+
   private photo: File | null = null;
 
   private readonly placeSearch = viewChild<ElementRef<HTMLInputElement>>('placeSearch');
@@ -1423,33 +1453,90 @@ export class HomePage {
     this.description.set('');
   }
 
+  /**
+   * Checks for an open report of the same kind nearby before filing.
+   *
+   * The check happens before the photo is uploaded: if this turns out to be a
+   * duplicate, there is no reason to have put a second copy of the same pothole
+   * in storage.
+   */
   protected async file(): Promise<void> {
     if (!this.photo || this.busy() || !this.canFile()) return;
-
-    const campus = this.campus()!;
 
     this.busy.set(true);
     this.error.set(null);
 
     try {
-      const imageUrl = await this.media.upload(this.photo, 'reports');
       const fix = this.location();
+      const match = await this.tickets.findDuplicate(
+        this.category()!,
+        fix?.latitude ?? null,
+        fix?.longitude ?? null,
+      );
 
-      const ticket = await this.tickets.create({
-        category: this.category()!,
-        ward_location: campus.name,
-        image_url: imageUrl,
-        description: this.description().trim().slice(0, DESCRIPTION_LIMIT) || null,
-        latitude: fix?.latitude ?? null,
-        longitude: fix?.longitude ?? null,
-      });
+      if (match) {
+        this.duplicate.set(match);
+        return;
+      }
 
-      this.filed.set(ticket);
-      this.discard();
+      await this.createTicket();
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Could not file the report.');
     } finally {
       this.busy.set(false);
     }
+  }
+
+  /** "Yes, same problem" — back the existing report instead of filing again. */
+  protected async backExisting(): Promise<void> {
+    const match = this.duplicate();
+    if (!match || this.busy()) return;
+
+    this.busy.set(true);
+    this.error.set(null);
+
+    try {
+      await this.tickets.upvote(match.id);
+      this.backed.set(match.ticket_number);
+      this.duplicate.set(null);
+      this.discard();
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Could not add your upvote.');
+      this.duplicate.set(null);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  /** "Mine is different" — the citizen overrules the proximity guess. */
+  protected async fileAnyway(): Promise<void> {
+    this.duplicate.set(null);
+    this.busy.set(true);
+
+    try {
+      await this.createTicket();
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Could not file the report.');
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  private async createTicket(): Promise<void> {
+    const campus = this.campus()!;
+    const imageUrl = await this.media.upload(this.photo!, 'reports');
+    const fix = this.location();
+
+    const ticket = await this.tickets.create({
+      category: this.category()!,
+      ward_location: campus.name,
+      image_url: imageUrl,
+      description: this.description().trim().slice(0, DESCRIPTION_LIMIT) || null,
+      latitude: fix?.latitude ?? null,
+      longitude: fix?.longitude ?? null,
+    });
+
+    this.filed.set(ticket);
+    this.discard();
   }
 }

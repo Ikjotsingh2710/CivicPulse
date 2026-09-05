@@ -3,7 +3,13 @@ import { Injectable, inject } from '@angular/core';
 import { supabase } from './supabase.client';
 import { AuthService } from './auth.service';
 import { describeSupabaseError } from './supabase.errors';
-import type { GrievanceTicket, NewGrievanceTicket, TicketStatus } from './models';
+import type {
+  DuplicateMatch,
+  GrievanceTicket,
+  NewGrievanceTicket,
+  PublicTicket,
+  TicketStatus,
+} from './models';
 
 export interface AdminTicketFilters {
   status?: TicketStatus;
@@ -90,21 +96,80 @@ export class TicketsService {
   }
 
   /**
-   * Region search. RLS decides the breadth: a citizen sees their own tickets in
-   * those wards, an admin sees every ticket there. There is no public feed —
-   * that would need a policy exposing other people's reports.
+   * The public feed for a region — everybody's reports, not just your own.
+   *
+   * Reads the `public_tickets` view rather than the table. The view is the
+   * privacy boundary: it publishes the reporter's name and withholds their
+   * phone number, and it runs as its owner so it can show one citizen another
+   * citizen's report without opening up the underlying table.
    */
-  async listByWards(wards: readonly string[]): Promise<GrievanceTicket[]> {
+  async listPublicByWards(wards: readonly string[]): Promise<PublicTicket[]> {
     if (wards.length === 0) return [];
 
     const { data, error } = await supabase
-      .from('grievance_tickets')
+      .from('public_tickets')
       .select('*')
       .in('ward_location', wards as string[])
+      // Most-supported first: that is the whole point of upvoting.
+      .order('upvote_count', { ascending: false })
       .order('created_at', { ascending: false });
 
     if (error) throw new Error(describeSupabaseError(error, 'Could not search that region.'));
-    return (data ?? []) as GrievanceTicket[];
+    return (data ?? []) as PublicTicket[];
+  }
+
+  /**
+   * Looks for an open report of the same category within 75m.
+   *
+   * Advisory: the answer is shown to the citizen, who decides whether it is
+   * really the same problem. Returns null when the draft has no geotag, since
+   * proximity is the only signal worth trusting here.
+   */
+  async findDuplicate(
+    category: string,
+    latitude: number | null,
+    longitude: number | null,
+  ): Promise<DuplicateMatch | null> {
+    if (latitude === null || longitude === null) return null;
+
+    const { data, error } = await supabase.rpc('find_duplicate_ticket', {
+      p_category: category,
+      p_lat: latitude,
+      p_lng: longitude,
+    });
+
+    // A failed duplicate check must never block a report — the worst case is a
+    // duplicate that someone has to merge by hand later.
+    if (error) return null;
+    return (data as DuplicateMatch | null) ?? null;
+  }
+
+  /** Adds the caller's upvote. The server decides whether it is allowed. */
+  async upvote(ticketId: string): Promise<void> {
+    const { error } = await supabase
+      .from('ticket_upvotes')
+      .insert({ ticket_id: ticketId, user_phone: this.auth.phone() });
+
+    if (error) {
+      if (error.code === '23505') throw new Error('You have already upvoted this report.');
+      // The guard trigger's messages are written for the citizen.
+      throw new Error(error.message || 'Could not add your upvote.');
+    }
+  }
+
+  async removeUpvote(ticketId: string): Promise<void> {
+    const { error } = await supabase.from('ticket_upvotes').delete().eq('ticket_id', ticketId);
+    if (error) throw new Error(describeSupabaseError(error, 'Could not remove your upvote.'));
+  }
+
+  /** Which reports the caller has already upvoted, so buttons show their state. */
+  async myUpvotedIds(): Promise<Set<string>> {
+    if (!this.auth.phone()) return new Set();
+
+    const { data, error } = await supabase.from('ticket_upvotes').select('ticket_id');
+    if (error) return new Set();
+
+    return new Set((data ?? []).map((row) => (row as { ticket_id: string }).ticket_id));
   }
 
   /** Admin feed. Visible rows come from the `admin_all_tickets` policy. */
@@ -117,7 +182,12 @@ export class TicketsService {
     if (filters.wardLocation) query = query.eq('ward_location', filters.wardLocation);
     if (filters.submittedFrom) query = query.gte('created_at', filters.submittedFrom);
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+    // Most-upvoted first, then newest. Without this a problem affecting fifty
+    // people slides down the queue every time somebody files anything newer.
+    const { data, error } = await query
+      .order('upvote_count', { ascending: false })
+      .order('created_at', { ascending: false });
+
     if (error) throw new Error(describeSupabaseError(error, 'Could not load the feed.'));
     return (data ?? []) as GrievanceTicket[];
   }
