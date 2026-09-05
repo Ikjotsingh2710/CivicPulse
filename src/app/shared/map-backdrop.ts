@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, input, viewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, input, viewChild } from '@angular/core';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -174,14 +174,41 @@ function junctions(roads: readonly Point[][], minGap = 46): Point[] {
     }
   `,
 })
-export class MapBackdrop implements AfterViewInit {
+export class MapBackdrop implements AfterViewInit, OnDestroy {
   /** Fixed seed renders a repeatable map; omit it for a new one each load. */
   readonly seed = input<number>(Math.floor(Math.random() * 1_000_000_000));
 
   private readonly host = viewChild.required<ElementRef<HTMLDivElement>>('host');
+  private observer: IntersectionObserver | null = null;
 
   ngAfterViewInit(): void {
-    this.host().nativeElement.appendChild(this.draw());
+    const host = this.host().nativeElement;
+    host.appendChild(this.draw());
+    this.watchVisibility(host);
+  }
+
+  ngOnDestroy(): void {
+    this.observer?.disconnect();
+    this.observer = null;
+  }
+
+  /**
+   * Stops the blips animating once the hero is scrolled past.
+   *
+   * Nothing about a CSS animation stops when it leaves the viewport — the
+   * browser keeps compositing every frame for a backdrop nobody can see, which
+   * is pure battery and frame budget spent on nothing. The class this toggles
+   * sets `animation-play-state: paused` in the global stylesheet.
+   */
+  private watchVisibility(host: HTMLElement): void {
+    if (typeof IntersectionObserver === 'undefined') return;
+
+    this.observer = new IntersectionObserver(
+      ([entry]) => host.classList.toggle('cp-map-idle', !entry.isIntersecting),
+      { threshold: 0 },
+    );
+
+    this.observer.observe(host);
   }
 
   private draw(): SVGSVGElement {
@@ -293,18 +320,19 @@ export class MapBackdrop implements AfterViewInit {
       opacity: 0.95,
     });
 
-    // A live blip on every junction the network produces — minors included, so
-    // the whole map lights up rather than just the trunk roads. Capped because
-    // each blip is three filtered, animated nodes and a dense city can throw
-    // out well over a hundred crossings.
-    const crossings = junctions([...majors, ...minors], 30).slice(0, 52);
+    // A live blip on junctions the network produces. Capped hard: each blip is
+    // three animated nodes and at least one of them is blurred, so the browser
+    // re-rasterises every one of them on every frame. Fifty-two of these made
+    // the hero visibly stutter on a mid-range phone; the map reads as just as
+    // alive at a third of that, because they pulse out of phase.
+    const crossings = junctions([...majors, ...minors], 30).slice(0, 18);
 
     for (const [x, y] of crossings) {
       const onTrunk = x > W * 0.34;
       svg.appendChild(this.blip(x, y, PALETTE.routeGreen, rand() * 3.4, !onTrunk));
     }
 
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 3; i++) {
       svg.appendChild(
         this.blip(80 + rand() * (W - 160), 70 + rand() * (H - 140), PALETTE.routeAmber, rand() * 3),
       );
@@ -312,11 +340,11 @@ export class MapBackdrop implements AfterViewInit {
 
     // The left third sits under the heaviest part of the scrim and the roads
     // rarely cross there, so it is seeded deliberately rather than left bare.
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 3; i++) {
       svg.appendChild(
         this.blip(
           52 + rand() * (W * 0.3 - 52),
-          90 + (i / 5) * (H - 180) + rand() * 70,
+          90 + (i / 3) * (H - 180) + rand() * 70,
           i % 2 === 0 ? PALETTE.routeGreen : PALETTE.routeAmber,
           rand() * 3,
           true,
@@ -326,10 +354,10 @@ export class MapBackdrop implements AfterViewInit {
 
     // Top right, seeded the same way: the lanes run mostly diagonally, so that
     // corner is often the emptiest part of the frame.
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 3; i++) {
       svg.appendChild(
         this.blip(
-          W * 0.6 + (i / 6) * (W * 0.38) + rand() * 46,
+          W * 0.6 + (i / 3) * (W * 0.38) + rand() * 46,
           64 + rand() * (H * 0.38),
           i % 2 === 0 ? PALETTE.routeGreen : PALETTE.routeAmber,
           rand() * 3,
@@ -382,21 +410,20 @@ export class MapBackdrop implements AfterViewInit {
     );
     halo.setAttribute('fill', colour);
 
-    const ring = circle(
-      strong ? 6.4 : 5.4,
-      'cp-blip-ring',
-      `${delay}; filter: drop-shadow(0 0 ${strong ? 8 : 5}px ${colour})`,
-    );
+    // No drop-shadow here. A filter on an element that is also animating forces
+    // the browser to re-blur it every frame; the halo behind already supplies
+    // the glow, so this one only has to be a crisp ring.
+    const ring = circle(strong ? 6.4 : 5.4, 'cp-blip-ring', delay);
     ring.setAttribute('fill', 'none');
     ring.setAttribute('stroke', colour);
     ring.setAttribute('stroke-width', strong ? '1.9' : '1.6');
 
+    // Was three stacked drop-shadows — three separate blur passes per frame,
+    // per blip. One is indistinguishable once the halo is behind it.
     const core = circle(
       strong ? 4.2 : 3.4,
       'cp-blip-core',
-      `${delay}; filter: drop-shadow(0 0 ${strong ? 6 : 4}px ${colour}) ` +
-        `drop-shadow(0 0 ${strong ? 16 : 11}px ${colour}) ` +
-        `drop-shadow(0 0 ${strong ? 28 : 20}px ${colour})`,
+      `${delay}; filter: drop-shadow(0 0 ${strong ? 9 : 6}px ${colour})`,
     );
     core.setAttribute('fill', colour);
 

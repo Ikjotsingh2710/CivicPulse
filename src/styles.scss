@@ -386,12 +386,14 @@ button:disabled {
 .cp-blip-ring {
   transform-box: fill-box;
   transform-origin: center;
+  will-change: transform, opacity;
   animation: cp-blip-pulse 3.4s ease-out infinite;
 }
 
 .cp-blip-core {
   transform-box: fill-box;
   transform-origin: center;
+  will-change: transform, opacity;
   animation: cp-blip-breathe 3.4s ease-in-out infinite;
 }
 
@@ -404,6 +406,10 @@ button:disabled {
   transform-box: fill-box;
   transform-origin: center;
   filter: blur(7px);
+  /* Without this the blur is recomputed on every animated frame. Promoted to
+     its own layer, it is blurred once and then merely scaled by the
+     compositor — the single biggest win in this file. */
+  will-change: transform, opacity;
   animation: cp-blip-glow 3.4s ease-in-out infinite;
 }
 
@@ -502,6 +508,25 @@ button:disabled {
 
 @media (prefers-reduced-motion: reduce) {
   .cp-map-ping {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------- backdrop motion control */
+
+/* The hero backdrop keeps animating after it scrolls away, burning frames for
+   nobody. MapBackdrop adds this class when the element leaves the viewport. */
+.cp-map-idle .cp-blip-ring,
+.cp-map-idle .cp-blip-core,
+.cp-map-idle .cp-blip-halo {
+  animation-play-state: paused;
+}
+
+/* Some people get motion sick, and some devices simply cannot afford it. */
+@media (prefers-reduced-motion: reduce) {
+  .cp-blip-ring,
+  .cp-blip-core,
+  .cp-blip-halo {
     animation: none;
   }
 }
