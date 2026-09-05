@@ -23,6 +23,7 @@ export const INSTITUTIONS: readonly Institution[] = [
   { name: 'University of Delhi — North Campus', city: 'New Delhi', pincode: '110007', lat: 28.6889, lng: 77.2103 },
   { name: 'University of Delhi — South Campus', city: 'New Delhi', pincode: '110021', lat: 28.5875, lng: 77.1682 },
   { name: 'Jamia Millia Islamia', city: 'New Delhi', pincode: '110025', lat: 28.5615, lng: 77.2803 },
+  { name: 'Guru Tegh Bahadur Institute of Technology', city: 'New Delhi', pincode: '110064', lat: 28.6470, lng: 77.1195 },
   { name: 'IIT Delhi', city: 'New Delhi', pincode: '110016', lat: 28.5450, lng: 77.1926 },
   { name: 'IIT Bombay', city: 'Mumbai', pincode: '400076', lat: 19.1334, lng: 72.9133 },
   { name: 'IIT Madras', city: 'Chennai', pincode: '600036', lat: 12.9915, lng: 80.2337 },

@@ -41,6 +41,7 @@ insert into public.campuses (name) values
   ('University of Delhi — North Campus'),
   ('University of Delhi — South Campus'),
   ('Jamia Millia Islamia'),
+  ('Guru Tegh Bahadur Institute of Technology'),
   ('IIT Delhi'),
   ('IIT Bombay'),
   ('IIT Madras'),
