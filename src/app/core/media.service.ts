@@ -26,6 +26,33 @@ export class MediaService {
       : this.uploadToSupabase(file, folder);
   }
 
+  /**
+   * Permanently deletes a previously uploaded photo.
+   *
+   * Only Supabase-hosted files can be removed: a Cloudinary unsigned upload has
+   * no delete credential in the browser by design, so those are reported as
+   * un-deletable rather than silently pretended away.
+   *
+   * Failure is returned, not thrown. Deleting the photo is the second half of
+   * rejecting a report, and a storage hiccup must not leave the report itself
+   * un-rejected — a rejected report with a lingering file is recoverable, a
+   * report the desk could not close is not.
+   */
+  async remove(url: string): Promise<{ removed: boolean; reason?: string }> {
+    const marker = `/object/public/${BUCKET}/`;
+    const at = url.indexOf(marker);
+
+    if (at === -1) {
+      return { removed: false, reason: 'Not stored in Supabase — delete it at the host.' };
+    }
+
+    const path = decodeURIComponent(url.slice(at + marker.length).split('?')[0]);
+    const { error } = await supabase.storage.from(BUCKET).remove([path]);
+
+    if (error) return { removed: false, reason: describeSupabaseError(error, 'Delete failed.') };
+    return { removed: true };
+  }
+
   private async uploadToCloudinary(file: File, folder: string): Promise<string> {
     const { cloudName, unsignedPreset } = environment.cloudinary;
 

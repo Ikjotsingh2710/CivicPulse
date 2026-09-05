@@ -8,6 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { explainGeolocationError, getFix } from '../core/geolocate';
+import { inspectImage, type ImageVerdict } from '../core/image-check';
 
 export interface CapturedLocation {
   latitude: number;
@@ -80,9 +81,23 @@ type Stage =
           @case ('review') {
             <h2>Use this photo?</h2>
             <img class="viewfinder" [src]="previewUrl()" alt="Captured photo" />
+
+            <!-- Checked on this device before anything is uploaded. A warning,
+                 not a block: a broken-streetlight report is a photo of darkness,
+                 and the citizen can see their own shot better than we can. -->
+            @if (quality(); as q) {
+              @if (q.warning) {
+                <p class="alert" [class.alert-error]="!q.usable" [class.alert-ok]="q.usable">
+                  {{ q.warning }}
+                </p>
+              }
+            }
+
             <div class="actions">
               <button class="btn-ghost" type="button" (click)="retake()">Retake</button>
-              <button class="btn-slate" type="button" (click)="askLocation()">Use photo</button>
+              <button class="btn-slate" type="button" (click)="askLocation()">
+                {{ quality()?.warning ? 'Use it anyway' : 'Use photo' }}
+              </button>
             </div>
           }
 
@@ -237,6 +252,8 @@ export class CameraCapture implements OnDestroy {
   protected readonly previewUrl = signal<string | null>(null);
   /** True once GPS has given up and the coarse network fix is being tried. */
   protected readonly slowFix = signal(false);
+  /** Pre-upload quality verdict, computed on this device after capture. */
+  protected readonly quality = signal<ImageVerdict | null>(null);
 
   private readonly video = viewChild<ElementRef<HTMLVideoElement>>('video');
 
@@ -309,7 +326,15 @@ export class CameraCapture implements OnDestroy {
         this.revokePreview();
         this.previewUrl.set(URL.createObjectURL(blob));
         this.stopStream();
+        this.quality.set(null);
         this.stage.set('review');
+
+        // Runs on this device, on a 128px downsample — a few milliseconds, no
+        // network, and it happens while the citizen is already looking at the
+        // shot. A failure here must never stand between them and filing.
+        void inspectImage(blob)
+          .then((verdict) => this.quality.set(verdict))
+          .catch(() => this.quality.set(null));
       },
       'image/jpeg',
       0.85,
@@ -318,6 +343,7 @@ export class CameraCapture implements OnDestroy {
 
   retake(): void {
     this.blob = null;
+    this.quality.set(null);
     this.revokePreview();
     void this.startCamera();
   }

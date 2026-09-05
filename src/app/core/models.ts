@@ -193,7 +193,10 @@ export interface PublicTicket {
   latitude: number | null;
   longitude: number | null;
   ward_location: string;
-  image_url: string;
+  /** Null until the desk has reviewed it — unreviewed photos are not published. */
+  image_url: string | null;
+  /** True while the photo is withheld pending review. */
+  photo_pending: boolean;
   status: TicketStatus;
   upvote_count: number;
   user_name: string | null;

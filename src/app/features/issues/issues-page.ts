@@ -97,7 +97,20 @@ import type { PublicTicket, TicketStatus } from '../../core/models';
         <div class="list">
           @for (ticket of tickets(); track ticket.id) {
             <article class="card row">
-              <img cpZoom [src]="ticket.image_url" [alt]="'Reported ' + ticket.category" />
+              <!-- A photo nobody has reviewed is not published. The report
+                   still shows, so it can still be backed while it is checked. -->
+              @if (ticket.image_url; as photo) {
+                <img cpZoom [src]="photo" [alt]="'Reported ' + ticket.category" />
+              } @else {
+                <div class="pending" role="img" aria-label="Photo awaiting review">
+                  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/>
+                    <path d="M12 7.5v5l3 2" fill="none" stroke="currentColor"
+                          stroke-width="1.6" stroke-linecap="round"/>
+                  </svg>
+                  <span>Photo under review</span>
+                </div>
+              }
 
               <div class="detail">
                 <p class="number">{{ ticket.ticket_number }}</p>
@@ -222,6 +235,24 @@ import type { PublicTicket, TicketStatus } from '../../core/models';
       grid-template-columns: 110px 1fr 92px;
       gap: 16px;
       align-items: center;
+    }
+
+    .pending {
+      width: 110px;
+      height: 82px;
+      border-radius: var(--radius);
+      border: 1px dashed var(--line-strong);
+      background: var(--surface-sunken);
+      color: var(--ink-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      text-align: center;
+      font-size: 0.68rem;
+      line-height: 1.25;
+      padding: 6px;
     }
 
     .row img {

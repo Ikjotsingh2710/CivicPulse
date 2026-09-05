@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 
 import { supabase } from './supabase.client';
 import { AuthService } from './auth.service';
+import { MediaService } from './media.service';
 import { describeSupabaseError } from './supabase.errors';
 import { COARSE_FIX_METRES } from './geolocate';
 import type {
@@ -24,6 +25,7 @@ export interface AdminTicketFilters {
 @Injectable({ providedIn: 'root' })
 export class TicketsService {
   private readonly auth = inject(AuthService);
+  private readonly media = inject(MediaService);
 
   /**
    * The citizen's own tickets. The `eq` below is a convenience for the query
@@ -279,6 +281,13 @@ export class TicketsService {
       .single<GrievanceTicket>();
 
     if (error) throw new Error(describeSupabaseError(error, 'Could not reject the report.'));
+
+    // Rejecting used to leave the photo in public storage for ever, which made
+    // the button useless against the thing it exists for. The status change is
+    // already committed above, so a failure here leaves a rejected report with
+    // an orphaned file — recoverable — rather than a report nobody could close.
+    if (data.image_url) void this.media.remove(data.image_url);
+
     return data;
   }
 
