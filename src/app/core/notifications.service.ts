@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, effect, inject, signal } from '@angular/core';
 
 import { supabase } from './supabase.client';
 import { AuthService } from './auth.service';
@@ -43,10 +43,19 @@ export class NotificationsService {
   private timer: ReturnType<typeof setInterval> | null = null;
   private started = false;
 
-  /**
-   * Begins watching. Safe to call repeatedly — the app calls it on every
-   * navigation and whenever admin status is re-checked.
-   */
+  constructor() {
+    // Watching admin status rather than navigation. The session restores
+    // asynchronously, so on a fresh page load the first NavigationEnd fires
+    // while isAdmin() is still false — start() would bail and, with nothing to
+    // retry it, an admin who landed on the homepage and stayed there never got
+    // a badge or a dot at all. An effect re-runs the moment the signal flips.
+    effect(() => {
+      if (this.auth.isAdmin()) this.start();
+      else this.stop();
+    });
+  }
+
+  /** Begins watching. Safe to call repeatedly; only the first call does work. */
   start(): void {
     if (this.started || !this.auth.isAdmin()) return;
     this.started = true;

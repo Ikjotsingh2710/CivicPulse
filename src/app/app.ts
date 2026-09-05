@@ -54,10 +54,6 @@ export class App {
         this.onDark.set(url === '/' || url.startsWith('/?'));
         this.profileOpen.set(false);
         this.regionOpen.set(false);
-
-        // Admin status is only known once the session has loaded, so this is
-        // the earliest reliable point to begin watching. start() is idempotent.
-        this.notifications.start();
       }
     });
   }
@@ -130,8 +126,6 @@ export class App {
 
   protected async signOut(): Promise<void> {
     this.profileOpen.set(false);
-    // Otherwise the next person to sign in on this device inherits the count.
-    this.notifications.stop();
     await this.auth.signOut();
     await this.router.navigateByUrl('/auth');
   }
