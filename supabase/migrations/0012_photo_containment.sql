@@ -46,7 +46,12 @@ create policy ticket_photos_admin_delete on storage.objects
  * The reporter and the ward desk both keep full access through the underlying
  * table; this view is only what the public sees.
  */
-create or replace view public.public_tickets as
+-- Dropped rather than replaced: CREATE OR REPLACE VIEW can only append columns,
+-- and `photo_pending` belongs next to the image_url it explains rather than
+-- tacked on the end. Nothing depends on this view, so dropping it is safe.
+drop view if exists public.public_tickets;
+
+create view public.public_tickets as
 select
   t.id,
   t.ticket_number,
