@@ -12,7 +12,7 @@ import { AuthService, formatPhone } from '../../core/auth.service';
     <div class="page narrow">
       <header class="head">
         <h1>Security settings</h1>
-        <p class="muted">Manage the password on this account and end other sessions.</p>
+        <p class="muted">Change the password on this account.</p>
       </header>
 
       <section class="card identity">
@@ -81,24 +81,13 @@ import { AuthService, formatPhone } from '../../core/auth.service';
             />
           </div>
 
-          <button class="btn-primary" type="submit" [disabled]="busy()">
-            {{ busy() ? 'Updating…' : 'Update password' }}
-          </button>
+          <div class="row">
+            <button class="btn-primary" type="submit" [disabled]="busy()">
+              {{ busy() ? 'Updating…' : 'Update password' }}
+            </button>
+            <a class="btn-ghost link-btn" routerLink="/profile">Back to complaints</a>
+          </div>
         </form>
-      </section>
-
-      <section class="card">
-        <h2>Sessions</h2>
-        <p class="muted lead">
-          Signing out everywhere invalidates the token on every device you have used, including
-          this one. Use it if you signed in on a shared or lost phone.
-        </p>
-        <div class="row">
-          <a class="btn-ghost link-btn" routerLink="/profile">Back to complaints</a>
-          <button class="btn-ghost danger" type="button" (click)="signOutEverywhere()">
-            Sign out of all devices
-          </button>
-        </div>
       </section>
     </div>
   `,
@@ -235,8 +224,4 @@ export class SecurityPage {
     }
   }
 
-  protected async signOutEverywhere(): Promise<void> {
-    await this.auth.signOutEverywhere();
-    await this.router.navigateByUrl('/auth');
-  }
 }

@@ -156,12 +156,6 @@ export class AuthService {
     this.adminRowSignal.set(null);
   }
 
-  /** Ends every session on every device, not just this browser. */
-  async signOutEverywhere(): Promise<void> {
-    await supabase.auth.signOut({ scope: 'global' });
-    this.adminRowSignal.set(null);
-  }
-
   /**
    * Re-checks the current password before changing it. Supabase does not
    * require the old password for an authenticated update, which would let
