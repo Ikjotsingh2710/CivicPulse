@@ -44,3 +44,6 @@ __screenshots__/
 Thumbs.db
 .env
 
+# Vercel CLI's local project link
+.vercel
+
