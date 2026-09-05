@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CivicPulse — SIH 2026</title>
+
+<!-- DEVIATION (1/3): no Tailwind CDN, no GSAP CDN. The brief requires the deck
+     to run with wifi off; a CDN needs the network on first load, so every style
+     and animation below is hand-written and inline. Zero external dependencies.
+     DEVIATION (2/3): fonts are linked but every rule carries a real fallback
+     stack, so offline the deck degrades to system faces and still lays out
+     identically. Nothing else on the page touches the network.
+     DEVIATION (3/3): slide 4 is Community Signal, not "3D vector mapping" —
+     MapLibre is an unused dependency in this project and there is no 3D map to
+     demo. Claiming one is how a team gets caught when a judge opens the app. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#020617; --s1:#0F172A; --s2:#1E293B;
+  --emerald:#10B981; --emerald-dim:rgba(16,185,129,.14);
+  --amber:#F59E0B; --amber-dim:rgba(245,158,11,.14);
+  --rose:#F43F5E;
+  --ink:#F8FAFC; --ink-2:rgba(248,250,252,.68); --ink-3:rgba(248,250,252,.42);
+  --line:rgba(255,255,255,.10); --glass:rgba(255,255,255,.05);
+  --head:'Plus Jakarta Sans',"Segoe UI",system-ui,sans-serif;
+  --body:'Inter',"Segoe UI",system-ui,sans-serif;
+  --mono:'JetBrains Mono',"Cascadia Mono",Consolas,monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:var(--body);color:var(--ink);-webkit-font-smoothing:antialiased}
+
+/* 1600x900 stage scaled to fit — identical layout on every screen, which is
+   what makes a deck safe to present on unknown hardware. */
+#viewport{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg)}
+#stage{width:1600px;height:900px;position:relative;transform-origin:center center}
+
+.slide{
+  position:absolute;inset:0;padding:74px 80px;
+  opacity:0;visibility:hidden;transform:scale(.98);
+  transition:opacity .4s var(--ease),transform .4s var(--ease),visibility 0s .4s;
+  display:flex;flex-direction:column;justify-content:center;
+}
+.slide.on{opacity:1;visibility:visible;transform:scale(1);transition-delay:0s}
+
+/* Entrance: fade + 12px rise, staggered by JS. */
+.r{opacity:0;transform:translateY(12px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
+.slide.on .r.in{opacity:1;transform:none}
+
+h1{font-family:var(--head);font-weight:800;letter-spacing:-.02em;line-height:.98}
+h2{font-family:var(--head);font-weight:800;font-size:56px;letter-spacing:-.022em;line-height:1.02}
+h3{font-family:var(--head);font-weight:700;font-size:21px;letter-spacing:-.015em}
+h4{font-family:var(--head);font-weight:700;font-size:16px;letter-spacing:-.01em}
+p{line-height:1.6;color:var(--ink-2)}
+
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--emerald);margin-bottom:16px}
+.eyebrow.am{color:var(--amber)}
+.sub{font-size:19px;color:var(--ink-2);margin-top:18px;max-width:70ch}
+
+/* -------------------------------------------------------------- primitives */
+.card{background:var(--glass);border:1px solid var(--line);border-radius:16px;padding:26px;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  transition:transform .3s var(--ease),border-color .3s var(--ease),box-shadow .3s var(--ease)}
+.card:hover{transform:translateY(-4px);border-color:var(--emerald);box-shadow:0 0 0 1px var(--emerald-dim),0 18px 50px -22px rgba(16,185,129,.55)}
+.card.am:hover{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber-dim),0 18px 50px -22px rgba(245,158,11,.55)}
+.card p{font-size:14.5px;margin-top:8px}
+
+.pill{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;
+  letter-spacing:.08em;padding:8px 14px;border-radius:999px;border:1px solid var(--line);
+  background:var(--glass);color:var(--ink-2);white-space:nowrap}
+.pill.em{color:var(--emerald);border-color:rgba(16,185,129,.34);background:var(--emerald-dim)}
+.pill.am{color:var(--amber);border-color:rgba(245,158,11,.34);background:var(--amber-dim)}
+.pill svg{width:14px;height:14px;flex:none}
+
+.ico{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;
+  background:var(--emerald-dim);border:1px solid rgba(16,185,129,.28);margin-bottom:16px}
+.ico svg{width:20px;height:20px;stroke:var(--emerald)}
+.ico.am{background:var(--amber-dim);border-color:rgba(245,158,11,.28)}
+.ico.am svg{stroke:var(--amber)}
+.ico.ro{background:rgba(244,63,94,.12);border-color:rgba(244,63,94,.28)}
+.ico.ro svg{stroke:var(--rose)}
+svg.lu{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.grid{display:grid;gap:24px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+
+.stat b{display:block;font-family:var(--head);font-weight:800;font-size:50px;line-height:1;
+  letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.stat span{display:block;margin-top:9px;font-family:var(--mono);font-size:11.5px;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.stat.em b{color:var(--emerald)} .stat.am b{color:var(--amber)}
+
+.tick{display:flex;gap:11px;align-items:flex-start;font-size:14.5px;color:var(--ink-2);line-height:1.5}
+.tick svg{width:17px;height:17px;stroke:var(--emerald);flex:none;margin-top:2px}
+.tick.ro svg{stroke:var(--rose)}
+.list{display:flex;flex-direction:column;gap:12px;margin-top:16px}
+
+.note{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--amber);border:1px dashed rgba(245,158,11,.4);border-radius:6px;padding:5px 10px;display:inline-block}
+
+/* ------------------------------------------------------------------ chrome */
+#hud{position:fixed;right:26px;bottom:22px;z-index:60;display:flex;align-items:center;gap:14px;
+  font-family:var(--mono);font-size:12px;color:var(--ink-3);
+  background:rgba(2,6,23,.82);border:1px solid var(--line);border-radius:10px;padding:9px 13px;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+#hud b{color:var(--ink);font-weight:500}
+#hud button{background:none;border:1px solid var(--line);border-radius:6px;color:var(--ink-2);
+  font-family:var(--mono);font-size:13px;line-height:1;padding:5px 9px;cursor:pointer;transition:.2s}
+#hud button:hover{color:var(--emerald);border-color:var(--emerald)}
+#hud button:focus-visible,a:focus-visible{outline:2px solid var(--emerald);outline-offset:3px}
+#dots{display:flex;gap:6px}
+#dots i{width:6px;height:6px;border-radius:50%;background:var(--line);transition:.3s}
+#dots i.on{background:var(--emerald);width:18px;border-radius:3px}
+
+/* ------------------------------------------------------------- slide 1 ---- */
+.navmock{display:flex;align-items:center;justify-content:space-between;
+  border:1px solid var(--line);background:var(--glass);border-radius:12px;padding:13px 20px;margin-bottom:44px}
+.navmock .brand{font-family:var(--head);font-weight:800;font-size:16px;letter-spacing:-.02em}
+.navmock .brand span{color:var(--emerald)}
+.navmock nav{display:flex;gap:26px;font-size:13px;color:var(--ink-3)}
+.navmock .dot{width:26px;height:26px;border-radius:50%;border:1px solid var(--line)}
+.badges{display:flex;gap:12px;flex-wrap:wrap;margin-top:40px}
+#tw{font-family:var(--head);font-weight:700;font-size:23px;color:var(--emerald);letter-spacing:-.015em;min-height:32px}
+#tw i{display:inline-block;width:2px;height:21px;background:var(--emerald);margin-left:3px;
+  vertical-align:-3px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ------------------------------------------------------------- slide 3 ---- */
+.phone{width:290px;height:520px;border-radius:30px;border:1px solid var(--line);
+  background:linear-gradient(170deg,#0F172A,#020617);padding:14px;position:relative;overflow:hidden;flex:none}
+.vf{height:330px;border-radius:18px;background:
+  radial-gradient(120% 90% at 30% 20%,rgba(16,185,129,.14),transparent 60%),#0B1220;
+  border:1px solid var(--line);position:relative;overflow:hidden}
+.vf .corner{position:absolute;width:26px;height:26px;border:2px solid var(--emerald);opacity:.8}
+.vf .c1{top:16px;left:16px;border-right:0;border-bottom:0;border-radius:6px 0 0 0}
+.vf .c2{top:16px;right:16px;border-left:0;border-bottom:0;border-radius:0 6px 0 0}
+.vf .c3{bottom:16px;left:16px;border-right:0;border-top:0;border-radius:0 0 0 6px}
+.vf .c4{bottom:16px;right:16px;border-left:0;border-top:0;border-radius:0 0 6px 0}
+.shutter{width:56px;height:56px;border-radius:50%;border:3px solid var(--emerald);margin:22px auto 0;
+  display:grid;place-items:center;animation:shut 2.6s var(--ease) infinite}
+.shutter b{width:40px;height:40px;border-radius:50%;background:var(--emerald);display:block}
+@keyframes shut{0%,78%,100%{transform:scale(1)}84%{transform:scale(.86)}90%{transform:scale(1.04)}}
+.gpspill{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:12.5px;
+  color:var(--emerald);background:var(--emerald-dim);border:1px solid rgba(16,185,129,.3);
+  border-radius:999px;padding:8px 13px;margin-top:16px;justify-content:center}
+.gpspill svg{width:14px;height:14px;stroke:var(--emerald)}
+.disabled{display:flex;align-items:center;gap:10px;margin-top:14px;padding:11px 13px;border-radius:10px;
+  border:1px dashed rgba(244,63,94,.4);background:rgba(244,63,94,.07);
+  font-size:12.5px;color:rgba(248,250,252,.5);text-decoration:line-through}
+.disabled svg{width:15px;height:15px;stroke:var(--rose);flex:none;text-decoration:none}
+
+/* ------------------------------------------------------------- slide 4 ---- */
+.upvote{display:flex;flex-direction:column;align-items:center;gap:2px;padding:14px 10px;
+  border:1px solid rgba(16,185,129,.4);border-radius:12px;background:var(--emerald-dim);width:78px;flex:none}
+.upvote b{font-family:var(--head);font-weight:800;font-size:26px;color:var(--emerald);line-height:1;
+  font-variant-numeric:tabular-nums}
+.upvote span{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--ink-3);text-transform:uppercase}
+.feedrow{display:flex;align-items:center;gap:18px;padding:16px;border:1px solid var(--line);
+  border-radius:14px;background:var(--glass)}
+.thumb{width:64px;height:52px;border-radius:9px;flex:none;
+  background:linear-gradient(135deg,#1E293B,#0B1220);border:1px solid var(--line)}
+.dupe{border:1px solid rgba(245,158,11,.34);background:rgba(245,158,11,.07);border-radius:16px;padding:22px}
+.dupe .btns{display:grid;gap:9px;margin-top:16px}
+.dupe .b{padding:11px 14px;border-radius:9px;font-size:13.5px;font-weight:600;text-align:center;
+  border:1px solid var(--line);color:var(--ink-2)}
+.dupe .b.go{background:var(--emerald);border-color:var(--emerald);color:#04241a}
+
+/* ------------------------------------------------------------- slide 5 ---- */
+.flow{position:relative;margin-top:38px}
+.flow .track{position:absolute;top:37px;left:0;right:0;height:2px}
+.node{text-align:left}
+.node .dot{width:74px;height:74px;border-radius:20px;display:grid;place-items:center;
+  background:var(--s1);border:1px solid var(--line);margin-bottom:18px;position:relative;z-index:2}
+.node .dot svg{width:26px;height:26px;stroke:var(--emerald)}
+.node.am .dot svg{stroke:var(--amber)}
+.node .n{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--ink-3);margin-bottom:7px}
+
+/* ------------------------------------------------------------- slide 7 ---- */
+.split{border-radius:16px;border:1px solid var(--line);background:var(--glass);overflow:hidden}
+.split .hd{padding:18px 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+.split .bd{padding:24px}
+.trail{display:flex;align-items:center;gap:0;margin:18px 0 6px}
+.trail i{width:11px;height:11px;border-radius:50%;background:var(--emerald);flex:none}
+.trail i.off{background:var(--line)}
+.trail u{flex:1;height:2px;background:var(--line);text-decoration:none}
+.trail u.on{background:var(--emerald)}
+.ba{display:flex;gap:10px;margin-top:16px}
+.ba div{flex:1;height:74px;border-radius:10px;border:1px solid var(--line);display:grid;place-items:center;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--ink-3)}
+.ba div.aft{border-color:rgba(16,185,129,.4);background:var(--emerald-dim);color:var(--emerald)}
+
+/* ------------------------------------------------------------- slide 8 ---- */
+.phase{position:relative;padding-left:30px}
+.phase::before{content:'';position:absolute;left:0;top:6px;width:11px;height:11px;border-radius:50%;
+  background:var(--emerald);box-shadow:0 0 0 4px var(--emerald-dim)}
+.phase.next::before{background:var(--amber);box-shadow:0 0 0 4px var(--amber-dim)}
+.phase.later::before{background:var(--ink-3);box-shadow:0 0 0 4px rgba(255,255,255,.06)}
+
+/* ------------------------------------------------------------ slide 10 ---- */
+.spot{border:1px solid rgba(16,185,129,.34);border-radius:22px;background:
+  radial-gradient(90% 140% at 50% 0%,rgba(16,185,129,.14),transparent 70%),var(--glass);
+  padding:52px 60px;text-align:center;animation:glow 3.4s ease-in-out infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 60px -26px rgba(16,185,129,.5)}50%{box-shadow:0 0 90px -18px rgba(16,185,129,.75)}}
+.cta{display:inline-flex;align-items:center;gap:11px;margin-top:26px;padding:15px 30px;border-radius:12px;
+  background:var(--emerald);color:#04241a;font-family:var(--head);font-weight:700;font-size:17px;
+  text-decoration:none;letter-spacing:-.01em}
+.cta svg{width:18px;height:18px;stroke:#04241a}
+.vslot{margin-top:26px;border:1px dashed var(--line);border-radius:12px;padding:16px;
+  font-family:var(--mono);font-size:11.5px;color:var(--ink-3);letter-spacing:.06em}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition-duration:.01ms!important}
+  .r{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+
+<div id="viewport"><div id="stage">
+
+<!-- ========================================================== 01 TITLE ==== -->
+<section class="slide" data-i="0">
+  <div class="navmock r"><div class="brand">Civic<span>Pulse</span></div>
+    <nav><span>Report Issue</span><span>Issues by Region</span><span>Control Desk</span></nav>
+    <div class="dot"></div></div>
+
+  <h1 class="r" style="font-size:126px;margin-top:-6px">CivicPulse</h1>
+  <p class="r sub" style="font-size:23px;max-width:56ch;margin-top:22px">
+    The next-generation infrastructure grievance platform for smart cities and campuses.</p>
+  <div class="r" style="margin-top:26px"><span id="tw"></span></div>
+
+  <div class="badges r">
+    <span class="pill em"><svg class="lu" viewBox="0 0 24 24"><path d="M12 2l3 6 6 1-4.5 4.3 1 6.2L12 17l-5.5 2.5 1-6.2L3 9l6-1z"/></svg>SIH 2026</span>
+    <span class="pill">Angular 22 · Zoneless Signals</span>
+    <span class="pill">Supabase · Postgres RLS</span>
+    <span class="pill">Live &amp; Deployed</span>
+  </div>
+</section>
+
+<!-- ======================================================= 02 PROBLEM ==== -->
+<section class="slide" data-i="1">
+  <p class="eyebrow r">Why now</p>
+  <h2 class="r">Complaints go in.<br>Nothing comes out.</h2>
+
+  <div class="badges r" style="margin-top:26px">
+    <span class="pill am">Smart Cities Mission demands data-backed governance</span>
+    <span class="pill am">Campus grievances have no formal channel at all</span>
+    <span class="pill am">Citizens stop reporting after one silent ticket</span>
+  </div>
+
+  <div class="grid g2 r" style="margin-top:40px">
+    <div class="card" style="border-color:rgba(244,63,94,.28);opacity:.86">
+      <div class="ico ro"><svg class="lu" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+      <h3 style="color:var(--rose)">Traditional systems</h3>
+      <div class="list">
+        <div class="tick ro"><svg class="lu" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg><span>Gallery uploads — any old photo, from anywhere</span></div>
+        <div class="tick ro"><svg class="lu" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg><span>Location typed by hand, unverifiable</span></div>
+        <div class="tick ro"><svg class="lu" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg><span>Newest first — severity ignored entirely</span></div>
+        <div class="tick ro"><svg class="lu" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg><span>Closed with no proof, no reason, no reply</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ico"><svg class="lu" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
+      <h3 style="color:var(--emerald)">CivicPulse</h3>
+      <div class="list">
+        <div class="tick"><svg class="lu" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Live camera only — no file picker exists</span></div>
+        <div class="tick"><svg class="lu" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Coordinates read from the device at capture</span></div>
+        <div class="tick"><svg class="lu" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Queue ordered by people affected, not date</span></div>
+        <div class="tick"><svg class="lu" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Photo proof to close, written reason to reject</span></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="r" style="margin-top:26px;font-size:14px">
+    <span class="note">Projected impact — pilot target</span>
+    &nbsp;Duplicate merging and severity ordering are designed to cut repeat dispatches on a campus pilot.</p>
+</section>
+
+<!-- ================================================== 03 LIVE CAPTURE ==== -->
+<section class="slide" data-i="2">
+  <p class="eyebrow r">Flagship 01</p>
+  <h2 class="r">Zero-gallery live capture.</h2>
+  <p class="r sub">You cannot report a problem you are not standing in front of.</p>
+
+  <div style="display:flex;gap:56px;align-items:center;margin-top:34px">
+    <div class="phone r">
+      <div class="vf">
+        <span class="corner c1"></span><span class="corner c2"></span>
+        <span class="corner c3"></span><span class="corner c4"></span>
+      </div>
+      <div class="gpspill">
+        <svg class="lu" viewBox="0 0 24 24"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span id="gps">28.6139° N, 77.2090° E</span>
+      </div>
+      <div class="disabled">
+        <svg class="lu" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        <span>Choose from gallery</span>
+      </div>
+      <div class="shutter"><b></b></div>
+    </div>
+
+    <div style="flex:1">
+      <div class="grid g3 r">
+        <div class="card"><div class="ico"><svg class="lu" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+          <h4>Anti-tamper</h4><p>No file input in the citizen flow. A saved image cannot be submitted.</p></div>
+        <div class="card"><div class="ico"><svg class="lu" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg></div>
+          <h4>Device sensors</h4><p>GPS and timestamp embedded at the instant of capture, never typed.</p></div>
+        <div class="card"><div class="ico"><svg class="lu" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+          <h4>Immediate submit</h4><p>Photo, coordinates and category reach the ward desk in one action.</p></div>
+      </div>
+      <div class="grid g3 r" style="margin-top:26px">
+        <div class="stat em"><b data-count="26">0</b><span>Campuses mapped</span></div>
+        <div class="stat"><b data-count="133">0</b><span>Cities supported</span></div>
+        <div class="stat am"><b data-count="5">0</b><span>Issue categories</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================== 04 COMMUNITY SIGNAL === -->
+<section class="slide" data-i="3">
+  <p class="eyebrow r">Flagship 02</p>
+  <h2 class="r">The crowd decides what gets fixed first.</h2>
+  <p class="r sub">One problem becomes one ticket, carrying an honest count of who it affects.</p>
+
+  <div class="grid g2 r" style="margin-top:34px;align-items:start">
+    <div>
+      <div class="feedrow" style="margin-bottom:14px">
+        <div class="thumb"></div>
+        <div style="flex:1">
+          <h4>Pothole · Rajouri Garden</h4>
+          <p style="font-size:12.5px;margin-top:4px">CP-2026-00014 · In Progress</p>
+        </div>
+        <div class="upvote"><svg class="lu" viewBox="0 0 24 24" style="width:15px;height:15px;stroke:var(--emerald)"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          <b data-count="24">0</b><span>affected</span></div>
+      </div>
+      <div class="feedrow" style="opacity:.72">
+        <div class="thumb"></div>
+        <div style="flex:1">
+          <h4>Broken Streetlight · GTBIT</h4>
+          <p style="font-size:12.5px;margin-top:4px">CP-2026-00021 · Submitted</p>
+        </div>
+        <div class="upvote" style="border-color:var(--line);background:var(--glass)">
+          <svg class="lu" viewBox="0 0 24 24" style="width:15px;height:15px;stroke:var(--ink-3)"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          <b data-count="3" style="color:var(--ink-2)">0</b><span>affected</span></div>
+      </div>
+
+      <div class="list" style="margin-top:22px">
+        <div class="tick"><svg class="lu" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Cannot upvote your own report</span></div>
+        <div class="tick"><svg class="lu" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Cannot upvote twice — one person, one voice</span></div>
+        <div class="tick"><svg class="lu" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>All three refused by the database, not the interface</span></div>
+      </div>
+    </div>
+
+    <div class="dupe">
+      <span class="pill am" style="margin-bottom:14px">Duplicate detection · 75m radius</span>
+      <h3 style="margin-top:6px">Already reported?</h3>
+      <p style="font-size:14px;margin-top:8px">Someone reported this 40m from here. Three people are already backing it.</p>
+      <div class="btns">
+        <div class="b go">Yes — this is the same problem</div>
+        <div class="b">No, mine is different</div>
+      </div>
+      <p style="font-size:13px;margin-top:16px">
+        We <strong style="color:var(--ink)">ask</strong> rather than block. Two real potholes can sit 40m apart.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== 05 WORKFLOW ==== -->
+<section class="slide" data-i="4">
+  <p class="eyebrow r">System workflow</p>
+  <h2 class="r">One ticket, four guaranteed stages.</h2>
+
+  <div class="flow">
+    <svg class="track" viewBox="0 0 1440 2" preserveAspectRatio="none" aria-hidden="true">
+      <line x1="0" y1="1" x2="1440" y2="1" stroke="rgba(255,255,255,.10)" stroke-width="2"/>
+      <line id="wire" x1="0" y1="1" x2="1440" y2="1" stroke="#10B981" stroke-width="2"
+            stroke-dasharray="1440" stroke-dashoffset="1440"/>
+    </svg>
+
+    <div class="grid g4" style="position:relative">
+      <div class="node r">
+        <div class="dot"><svg class="lu" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+        <p class="n">STAGE 01</p><h3>Capture &amp; lock</h3>
+        <p style="font-size:14.5px;margin-top:7px">Citizen snaps live. GPS and timestamp embed automatically.</p>
+      </div>
+      <div class="node r">
+        <div class="dot"><svg class="lu" viewBox="0 0 24 24"><path d="M3 12h6l3-9 3 18 3-9h3"/></svg></div>
+        <p class="n">STAGE 02</p><h3>Intelligent route</h3>
+        <p style="font-size:14.5px;margin-top:7px">Auto-routed to the exact ward or campus queue, deduplicated on arrival.</p>
+      </div>
+      <div class="node am r">
+        <div class="dot"><svg class="lu" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 7v5l3 2"/></svg></div>
+        <p class="n">STAGE 03</p><h3>SLA escalation</h3>
+        <p style="font-size:14.5px;margin-top:7px">A 24-hour clock runs. Unattended tickets escalate to the department.</p>
+      </div>
+      <div class="node r">
+        <div class="dot"><svg class="lu" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+        <p class="n">STAGE 04</p><h3>Evidence closure</h3>
+        <p style="font-size:14.5px;margin-top:7px">Desk uploads the after-photo. Citizen is notified and can see the proof.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g3 r" style="margin-top:44px">
+    <div class="stat em"><b data-count="4">0</b><span>Terminal states, no dead ends</span></div>
+    <div class="stat am"><b data-count="24">0</b><span>Hour escalation SLA</span></div>
+    <div class="stat"><b data-count="100">0</b><span>% closed with a reason</span></div>
+  </div>
+</section>
+
+<!-- ==================================================== 06 TECH STACK ==== -->
+<section class="slide" data-i="5">
+  <p class="eyebrow r">Architecture</p>
+  <h2 class="r">Production stack. No paid dependency.</h2>
+  <p class="r sub">The browser talks to Postgres directly. Every rule that matters is a database policy.</p>
+
+  <div class="grid g4 r" style="margin-top:36px">
+    <div class="card"><div class="ico"><svg class="lu" viewBox="0 0 24 24"><path d="M12 2l9 4-1.5 12L12 22l-7.5-4L3 6z"/></svg></div>
+      <h4>Frontend</h4><p><strong style="color:var(--ink)">Angular 22</strong> — standalone components, signals, zoneless change detection. Nine lazy-loaded routes.</p></div>
+    <div class="card"><div class="ico"><svg class="lu" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
+      <h4>Design</h4><p>Hand-built SCSS token system. No CSS framework, no component library, no bundle bloat.</p></div>
+    <div class="card"><div class="ico am"><svg class="lu" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg></div>
+      <h4>Data &amp; auth</h4><p><strong style="color:var(--ink)">Supabase Postgres</strong> — 10 tables, all under row-level security. Phone + password, zero SMS cost.</p></div>
+    <div class="card"><div class="ico"><svg class="lu" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div>
+      <h4>Trust layer</h4><p>15 database functions and 9 triggers enforce every rule server-side. The client is never trusted.</p></div>
+  </div>
+
+  <div class="grid g4 r" style="margin-top:38px">
+    <div class="stat"><b data-count="76">0</b><span>Source files</span></div>
+    <div class="stat"><b data-count="9000">0</b><span>Lines of TypeScript</span></div>
+    <div class="stat em"><b data-count="10">0</b><span>Tables, all RLS-secured</span></div>
+    <div class="stat am"><b data-count="13">0</b><span>Automated tests passing</span></div>
+  </div>
+</section>
+
+<!-- ================================================ 07 DUAL INTERFACE ==== -->
+<section class="slide" data-i="6">
+  <p class="eyebrow r">Dual interface</p>
+  <h2 class="r">Two products, one source of truth.</h2>
+
+  <div class="grid g2 r" style="margin-top:34px">
+    <div class="split">
+      <div class="hd"><div class="ico" style="margin:0;width:32px;height:32px;border-radius:9px">
+        <svg class="lu" viewBox="0 0 24 24" style="width:17px;height:17px"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></div>
+        <h3>Citizen portal</h3></div>
+      <div class="bd">
+        <p style="font-size:14.5px">Live ticket tracking with a status trail you can watch move.</p>
+        <div class="trail"><i></i><u class="on"></u><i></i><u class="on"></u><i></i><u></u><i class="off"></i></div>
+        <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--ink-3);letter-spacing:.08em">
+          <span>FILED</span><span>ROUTED</span><span>IN PROGRESS</span><span>RESOLVED</span></div>
+        <div class="ba"><div>BEFORE</div><div class="aft">AFTER — PROOF</div></div>
+        <div class="list" style="margin-top:18px">
+          <div class="tick"><svg class="lu" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Rejection reasons shown verbatim</span></div>
+          <div class="tick"><svg class="lu" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Pulse Points wallet and reward redemption</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="split">
+      <div class="hd"><div class="ico am" style="margin:0;width:32px;height:32px;border-radius:9px">
+        <svg class="lu" viewBox="0 0 24 24" style="width:17px;height:17px"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></div>
+        <h3>Ward control desk</h3></div>
+      <div class="bd">
+        <p style="font-size:14.5px">Jurisdictional oversight with automated priority sorting.</p>
+        <div class="grid g3" style="gap:12px;margin-top:16px">
+          <div class="stat"><b data-count="47" style="font-size:32px">0</b><span style="font-size:9.5px">Open</span></div>
+          <div class="stat am"><b data-count="6" style="font-size:32px">0</b><span style="font-size:9.5px">Over 24h</span></div>
+          <div class="stat em"><b data-count="128" style="font-size:32px">0</b><span style="font-size:9.5px">Resolved</span></div>
+        </div>
+        <div class="list" style="margin-top:18px">
+          <div class="tick"><svg class="lu" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Queue sorted by people affected</span></div>
+          <div class="tick"><svg class="lu" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Reject with a reason, or correct the category</span></div>
+          <div class="tick"><svg class="lu" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Live alert the moment a report lands</span></div>
+        </div>
+        <p style="font-size:12px;margin-top:14px;color:var(--ink-3)">Figures shown are illustrative desk values.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== 08 ROADMAP ====== -->
+<section class="slide" data-i="7">
+  <p class="eyebrow r">Impact &amp; roadmap</p>
+  <h2 class="r">Live today. Intelligent next.</h2>
+
+  <div class="grid g3 r" style="margin-top:36px">
+    <div class="phase">
+      <span class="pill em" style="margin-bottom:12px">Phase 1 · Current</span>
+      <h3 style="margin-top:8px">Campus pilot, live</h3>
+      <p style="font-size:14.5px;margin-top:8px">Full reporting, upvoting, control desk and rewards running in production on a public URL.</p>
+    </div>
+    <div class="phase next">
+      <span class="pill am" style="margin-bottom:12px">Phase 2 · In development</span>
+      <h3 style="margin-top:8px">Vision-assisted triage</h3>
+      <p style="font-size:14.5px;margin-top:8px">Damage-severity scoring to rank the queue. Flags for review — never auto-rejects a citizen.</p>
+    </div>
+    <div class="phase later">
+      <span class="pill" style="margin-bottom:12px">Phase 3 · Planned</span>
+      <h3 style="margin-top:8px">Predictive maintenance</h3>
+      <p style="font-size:14.5px;margin-top:8px">Repeat-failure clustering and IoT sensor intake, so wards fix a road before it is reported.</p>
+    </div>
+  </div>
+
+  <div class="grid g4 r" style="margin-top:44px">
+    <div class="stat em"><b>₹<span data-count="0">0</span></b><span>Cost to operate</span></div>
+    <div class="stat"><b data-count="0">0</b><span>SMS sent — no OTP</span></div>
+    <div class="stat am"><b data-count="1">0</b><span>Campus pilot target</span></div>
+    <div class="stat"><b data-count="90">0</b><span>Seconds, push to live</span></div>
+  </div>
+
+  <p class="r" style="margin-top:26px;font-size:14px">
+    <span class="note">Projected</span>
+    &nbsp;Phase 2 and 3 targets are development goals, not measured outcomes.
+    The success metric we will report is <strong style="color:var(--ink)">repeat-reporter rate</strong> — whether people come back.</p>
+</section>
+
+<!-- ======================================================== 09 WHY WE WIN -->
+<section class="slide" data-i="8">
+  <p class="eyebrow r">Why CivicPulse wins</p>
+  <h2 class="r">Four things nobody else has together.</h2>
+
+  <div class="grid g2 r" style="margin-top:34px">
+    <div class="card"><div class="ico"><svg class="lu" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div>
+      <h3>Fraud-proof by construction</h3>
+      <p>No gallery bypass exists. We attacked our own database with the public key — forging points and reading other users' data were both refused.</p></div>
+    <div class="card am"><div class="ico am"><svg class="lu" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+      <h3>Zero licence cost</h3>
+      <p>No maps API, no SMS gateway, no AI billing, no paid hosting. A campus can adopt it without a budget approval.</p></div>
+    <div class="card"><div class="ico"><svg class="lu" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+      <h3>Absolute transparency</h3>
+      <p>Before-and-after photo proof on every closure, and a written reason on every rejection. The audit trail is public.</p></div>
+    <div class="card"><div class="ico"><svg class="lu" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9z"/></svg></div>
+      <h3>Built for low-end phones</h3>
+      <p>Zoneless Angular signals, lazy routes, and a hand-tuned hero that carries no filter work per frame.</p></div>
+  </div>
+
+  <div class="badges r" style="margin-top:34px">
+    <span class="pill em">Points paid on approval, never on upload</span>
+    <span class="pill em">One report, one payout, enforced by index</span>
+    <span class="pill em">Upvotes deliberately earn nothing</span>
+  </div>
+</section>
+
+<!-- ==================================================== 10 CONCLUSION ==== -->
+<section class="slide" data-i="9">
+  <div class="spot r">
+    <p class="eyebrow" style="justify-self:center">Live in production</p>
+    <h2 style="font-size:50px;max-width:none">Experience live<br>infrastructure governance.</h2>
+    <p style="font-size:18px;margin-top:20px;max-width:58ch;margin-left:auto;margin-right:auto">
+      Not a prototype. Open it on your phone — the camera works, and that is the entire point.</p>
+
+    <a class="cta" href="https://civicpulse-black.vercel.app" target="_blank" rel="noopener">
+      civicpulse-black.vercel.app
+      <svg class="lu" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+
+    <div class="vslot">
+      BACKUP DEMO SLOT — replace this block with
+      &lt;video src="demo.mp4" autoplay muted loop playsinline style="width:100%;border-radius:12px"&gt;&lt;/video&gt;
+      and keep demo.mp4 beside this file, so a failed live demo costs you nothing.
+    </div>
+
+    <p style="margin-top:28px;font-family:var(--mono);font-size:12px;letter-spacing:.2em;color:var(--ink-3)">
+      SMART INDIA HACKATHON 2026 · CIVICPULSE</p>
+  </div>
+</section>
+
+</div></div>
+
+<div id="hud">
+  <button id="prev" aria-label="Previous slide">←</button>
+  <span><b id="cur">01</b> / 10</span>
+  <div id="dots" aria-hidden="true"></div>
+  <button id="next" aria-label="Next slide">→</button>
+</div>
+
+<script>
+(function(){
+  var slides=[].slice.call(document.querySelectorAll('.slide')),
+      stage=document.getElementById('stage'),
+      dots=document.getElementById('dots'),
+      cur=document.getElementById('cur'),
+      wire=document.getElementById('wire'),
+      i=0,
+      still=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  slides.forEach(function(){var d=document.createElement('i');dots.appendChild(d);});
+  var dotEls=[].slice.call(dots.children);
+
+  // Scale the 1600x900 stage to the viewport so the layout never reflows.
+  function fit(){
+    var k=Math.min(innerWidth/1600, innerHeight/900);
+    stage.style.transform='scale('+k+')';
+  }
+  addEventListener('resize',fit); fit();
+
+  function countUp(el){
+    var target=parseInt(el.getAttribute('data-count'),10);
+    if(isNaN(target)) return;
+    if(still){el.textContent=target.toLocaleString();return;}
+    var t0=null, dur=900;
+    function step(ts){
+      if(!t0) t0=ts;
+      var p=Math.min((ts-t0)/dur,1);
+      // ease-out-expo
+      var e=p===1?1:1-Math.pow(2,-10*p);
+      el.textContent=Math.round(target*e).toLocaleString();
+      if(p<1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  function typeGps(){
+    var el=document.getElementById('gps'); if(!el) return;
+    var full='28.6139° N, 77.2090° E';
+    if(still){el.textContent=full;return;}
+    el.textContent=''; var n=0;
+    (function tick(){
+      el.textContent=full.slice(0,++n);
+      if(n<full.length) setTimeout(tick,34);
+    })();
+  }
+
+  function typeTagline(){
+    var el=document.getElementById('tw'); if(!el) return;
+    var full='Snap Live. Geotag Automatically. Resolve Transparently.';
+    if(still){el.textContent=full;return;}
+    el.innerHTML=''; var n=0, span=document.createElement('span'), car=document.createElement('i');
+    el.appendChild(span); el.appendChild(car);
+    (function tick(){
+      span.textContent=full.slice(0,++n);
+      if(n<full.length) setTimeout(tick,26);
+    })();
+  }
+
+  function activate(n){
+    var s=slides[n];
+    // Stagger the entrance 100ms apart, capped so the whole slide lands < 600ms.
+    var rows=[].slice.call(s.querySelectorAll('.r'));
+    rows.forEach(function(el,k){
+      el.classList.remove('in');
+      setTimeout(function(){el.classList.add('in');}, still?0:Math.min(k*100,400));
+    });
+    // Numbers count from zero on activate, not on page load.
+    setTimeout(function(){
+      [].slice.call(s.querySelectorAll('[data-count]')).forEach(countUp);
+    }, still?0:280);
+
+    if(n===0) typeTagline();
+    if(n===2) typeGps();
+    if(n===4 && wire){
+      wire.style.transition='none'; wire.style.strokeDashoffset='1440';
+      requestAnimationFrame(function(){
+        wire.style.transition=still?'none':'stroke-dashoffset 1.5s cubic-bezier(.16,1,.3,1) .25s';
+        wire.style.strokeDashoffset='0';
+      });
+    }
+  }
+
+  function go(n){
+    n=Math.max(0,Math.min(slides.length-1,n));
+    if(n===i && slides[i].classList.contains('on')) return;
+    slides[i].classList.remove('on');
+    i=n;
+    slides[i].classList.add('on');
+    cur.textContent=String(i+1).padStart(2,'0');
+    dotEls.forEach(function(d,k){d.classList.toggle('on',k===i);});
+    activate(i);
+  }
+
+  document.getElementById('next').onclick=function(){go(i+1);};
+  document.getElementById('prev').onclick=function(){go(i-1);};
+
+  addEventListener('keydown',function(e){
+    if(['ArrowRight','ArrowDown','PageDown',' ','Enter'].indexOf(e.key)>-1){e.preventDefault();go(i+1);}
+    else if(['ArrowLeft','ArrowUp','PageUp'].indexOf(e.key)>-1){e.preventDefault();go(i-1);}
+    else if(e.key==='Home'){e.preventDefault();go(0);}
+    else if(e.key==='End'){e.preventDefault();go(slides.length-1);}
+    else if(e.key==='f'||e.key==='F'){
+      if(document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen();
+    }
+  });
+
+  // Touch swipe.
+  var x0=null;
+  addEventListener('touchstart',function(e){x0=e.changedTouches[0].clientX;},{passive:true});
+  addEventListener('touchend',function(e){
+    if(x0===null) return;
+    var dx=e.changedTouches[0].clientX-x0;
+    if(Math.abs(dx)>52) go(dx<0?i+1:i-1);
+    x0=null;
+  },{passive:true});
+
+  go(0);
+})();
+</script>
+</body>
+</html>
