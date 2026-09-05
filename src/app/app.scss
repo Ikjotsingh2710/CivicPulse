@@ -223,6 +223,7 @@ a.dropdown-item {
 }
 
 .phone-btn {
+  position: relative;
   background: transparent;
   border: 1px solid var(--line-strong);
   border-radius: 999px;
@@ -232,6 +233,37 @@ a.dropdown-item {
   place-items: center;
   color: var(--ink);
   padding: 0;
+}
+
+/* Unread-report marker. The ring is the page background rather than a colour,
+   so the dot reads as lifted off the button on the light bar and on the dark
+   hero alike, without needing a second rule for .on-dark. */
+.phone-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 0 2px var(--surface-base);
+  animation: cp-dot-in 220ms ease-out;
+}
+
+.on-dark .phone-dot {
+  box-shadow: 0 0 0 2px var(--green-900);
+}
+
+@keyframes cp-dot-in {
+  from {
+    transform: scale(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phone-dot {
+    animation: none;
+  }
 }
 
 .phone-btn:hover {

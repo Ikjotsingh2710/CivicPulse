@@ -73,9 +73,19 @@
         type="button"
         class="phone-btn"
         [attr.aria-expanded]="profileOpen()"
-        aria-label="Your account"
+        [attr.aria-label]="
+          notifications.pending() > 0
+            ? 'Your account — ' + notifications.pending() + ' reports waiting'
+            : 'Your account'
+        "
         (click)="toggleProfile()"
       >
+        <!-- Visible without opening the menu: the desk should know a report has
+             landed at a glance. Hidden for citizens, whose pending count is
+             always zero. -->
+        @if (notifications.pending() > 0) {
+          <span class="phone-dot" aria-hidden="true"></span>
+        }
         <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
           <path
             d="M7 2.5h10a1.5 1.5 0 0 1 1.5 1.5v16a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 20V4A1.5 1.5 0 0 1 7 2.5Z"
