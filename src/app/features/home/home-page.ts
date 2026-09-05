@@ -1472,6 +1472,7 @@ export class HomePage {
         this.category()!,
         fix?.latitude ?? null,
         fix?.longitude ?? null,
+        fix?.accuracy ?? null,
       );
 
       if (match) {

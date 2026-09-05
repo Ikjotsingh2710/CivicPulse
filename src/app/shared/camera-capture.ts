@@ -7,10 +7,13 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { explainGeolocationError, getFix } from '../core/geolocate';
 
 export interface CapturedLocation {
   latitude: number;
   longitude: number;
+  /** Radius of uncertainty in metres. Null when the device did not report one. */
+  accuracy: number | null;
 }
 
 type Stage =
@@ -101,7 +104,22 @@ type Stage =
 
           @case ('locating') {
             <h2>Getting your location…</h2>
-            <p class="muted">Accept your browser's permission prompt to continue.</p>
+            @if (slowFix()) {
+              <p class="muted">
+                GPS is taking a moment — this is normal indoors. Trying a rougher fix from the
+                network instead.
+              </p>
+            } @else {
+              <p class="muted">
+                Accept your browser's permission prompt. A GPS fix can take up to half a minute
+                outdoors.
+              </p>
+            }
+            <div class="actions">
+              <button class="btn-ghost" type="button" (click)="finish()">
+                Skip and file without it
+              </button>
+            </div>
           }
 
           @case ('location-failed') {
@@ -217,6 +235,8 @@ export class CameraCapture implements OnDestroy {
   protected readonly stage = signal<Stage>('camera-consent');
   protected readonly error = signal<string | null>(null);
   protected readonly previewUrl = signal<string | null>(null);
+  /** True once GPS has given up and the coarse network fix is being tried. */
+  protected readonly slowFix = signal(false);
 
   private readonly video = viewChild<ElementRef<HTMLVideoElement>>('video');
 
@@ -310,29 +330,17 @@ export class CameraCapture implements OnDestroy {
     this.stage.set('location-consent');
   }
 
-  requestLocation(): void {
-    if (!navigator.geolocation) {
-      this.error.set('This browser cannot share a location.');
-      this.stage.set('location-failed');
-      return;
-    }
-
+  async requestLocation(): Promise<void> {
     this.stage.set('locating');
+    this.slowFix.set(false);
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        this.fix = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        };
-        this.finish();
-      },
-      (error) => {
-        this.error.set(this.explainLocation(error));
-        this.stage.set('location-failed');
-      },
-      { enableHighAccuracy: true, timeout: 15_000 },
-    );
+    try {
+      this.fix = await getFix(() => this.slowFix.set(true));
+      this.finish();
+    } catch (error) {
+      this.error.set(explainGeolocationError(error));
+      this.stage.set('location-failed');
+    }
   }
 
   /**
@@ -375,17 +383,6 @@ export class CameraCapture implements OnDestroy {
       return 'Browsers only allow camera access over HTTPS or on localhost.';
     }
     return error instanceof Error ? error.message : 'Could not start the camera.';
-  }
-
-  private explainLocation(error: GeolocationPositionError): string {
-    if (error.code === error.PERMISSION_DENIED) {
-      return "Location permission was denied. You can allow it in your browser's site settings.";
-    }
-    if (error.code === error.POSITION_UNAVAILABLE) {
-      return 'Your device could not get a fix right now.';
-    }
-    if (error.code === error.TIMEOUT) return 'Getting a location fix took too long.';
-    return error.message || 'Could not read your location.';
   }
 
   private stopStream(): void {

@@ -2,6 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { explainGeolocationError, getFix } from '../../core/geolocate';
 
 import { AuthService } from '../../core/auth.service';
 import { MediaService } from '../../core/media.service';
@@ -260,6 +261,7 @@ export class ReportPage {
 
   protected readonly latitude = signal<number | null>(null);
   protected readonly longitude = signal<number | null>(null);
+  protected readonly accuracy = signal<number | null>(null);
   protected readonly locating = signal(false);
   protected readonly locationError = signal<string | null>(null);
 
@@ -290,6 +292,7 @@ export class ReportPage {
   protected onLocated(fix: CapturedLocation): void {
     this.latitude.set(fix.latitude);
     this.longitude.set(fix.longitude);
+    this.accuracy.set(fix.accuracy);
   }
 
   protected captureLocation(): void {
@@ -301,18 +304,14 @@ export class ReportPage {
     this.locating.set(true);
     this.locationError.set(null);
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        this.latitude.set(position.coords.latitude);
-        this.longitude.set(position.coords.longitude);
-        this.locating.set(false);
-      },
-      (error) => {
-        this.locationError.set(`Location unavailable: ${error.message}`);
-        this.locating.set(false);
-      },
-      { enableHighAccuracy: true, timeout: 12_000 },
-    );
+    void getFix()
+      .then((fix) => {
+        this.latitude.set(fix.latitude);
+        this.longitude.set(fix.longitude);
+        this.accuracy.set(fix.accuracy);
+      })
+      .catch((error) => this.locationError.set(explainGeolocationError(error)))
+      .finally(() => this.locating.set(false));
   }
 
   protected async submit(): Promise<void> {
@@ -337,6 +336,7 @@ export class ReportPage {
         this.category,
         this.latitude(),
         this.longitude(),
+        this.accuracy(),
       );
 
       if (match) {

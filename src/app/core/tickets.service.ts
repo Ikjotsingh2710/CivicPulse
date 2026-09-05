@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { supabase } from './supabase.client';
 import { AuthService } from './auth.service';
 import { describeSupabaseError } from './supabase.errors';
+import { COARSE_FIX_METRES } from './geolocate';
 import type {
   DuplicateMatch,
   GrievanceTicket,
@@ -121,6 +122,9 @@ export class TicketsService {
   /**
    * Looks for an open report of the same category within 75m.
    *
+   * Skipped entirely when there is no geotag, or when the fix is too coarse to
+   * distinguish 75 metres.
+   *
    * Advisory: the answer is shown to the citizen, who decides whether it is
    * really the same problem. Returns null when the draft has no geotag, since
    * proximity is the only signal worth trusting here.
@@ -129,8 +133,15 @@ export class TicketsService {
     category: string,
     latitude: number | null,
     longitude: number | null,
+    accuracyMetres: number | null = null,
   ): Promise<DuplicateMatch | null> {
     if (latitude === null || longitude === null) return null;
+
+    // A cell-tower fix can be kilometres wide, which would place unrelated
+    // reports at nearly the same coordinates and flag them as duplicates of
+    // each other. If the fix cannot resolve 75 metres, it cannot answer the
+    // question, so it is not asked.
+    if (accuracyMetres !== null && accuracyMetres > COARSE_FIX_METRES) return null;
 
     const { data, error } = await supabase.rpc('find_duplicate_ticket', {
       p_category: category,
