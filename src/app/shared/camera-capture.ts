@@ -1,9 +1,5 @@
 import { Component, ElementRef, OnDestroy, computed, effect, output, signal, viewChild } from '@angular/core';
-import {
-  REQUIRED_ACCURACY_M,
-  explainGeolocationError,
-  watchPreciseFix,
-} from '../core/geolocate';
+import { REQUIRED_ACCURACY_M, explainGeolocationError, watchBestFix } from '../core/geolocate';
 import { inspectImage, type ImageVerdict } from '../core/image-check';
 
 export interface CapturedLocation {
@@ -11,9 +7,12 @@ export interface CapturedLocation {
   longitude: number;
   /**
    * Radius of uncertainty in metres. Not optional: a fix only leaves this
-   * component once it is precise enough to file, so there is always a number.
+   * component once the device has actually produced one, so there is always a
+   * number — even when that number is large.
    */
   accuracy: number;
+  /** False when this locates an area rather than a spot. Travels to the desk. */
+  precise: boolean;
 }
 
 type Stage =
@@ -23,6 +22,8 @@ type Stage =
   | 'review'
   | 'location-consent'
   | 'locating'
+  /** A fix exists but only names an area; the citizen chooses what to do. */
+  | 'location-coarse'
   | 'location-failed'
   | 'error';
 
@@ -105,8 +106,9 @@ type Stage =
             <h2>Pin the exact spot</h2>
             <img class="thumb" [src]="previewUrl()" alt="Captured photo" />
             <p class="muted">
-              A crew has to walk to this problem, so the report carries the exact coordinates read
-              from this device — not the name of the area. Location is required.
+              A crew has to walk to this problem, so the report carries the coordinates read from
+              this device rather than the name of the area. We hold out for an exact fix and fall
+              back to the closest one your device can manage.
             </p>
             <div class="actions">
               <button class="btn-ghost" type="button" (click)="close()">Cancel</button>
@@ -139,12 +141,31 @@ type Stage =
             </p>
           }
 
+          @case ('location-coarse') {
+            <h2>Only got the general area</h2>
+            <p class="muted">
+              Your device could not see enough satellites to pin the exact spot. The best it
+              managed is <b>±{{ accuracy() }}m</b> — enough to tell the desk which area to look
+              in, but not which building.
+            </p>
+            <p class="muted hint">
+              Stepping outside or away from a window usually fixes this in a few seconds, and a
+              precise pin gets the problem found faster.
+            </p>
+            <div class="actions">
+              <button class="btn-ghost" type="button" (click)="finish()">File the area</button>
+              <button class="btn-slate" type="button" (click)="requestLocation()">
+                Try for exact
+              </button>
+            </div>
+          }
+
           @case ('location-failed') {
-            <h2>Not precise enough yet</h2>
+            <h2>No location at all</h2>
             <p class="alert alert-error">{{ error() }}</p>
             <p class="muted">
-              A report cannot be filed without its exact spot — an approximate area would send a
-              crew somewhere the problem is not. Step outside or near a window and try again.
+              A report needs at least a rough idea of where the problem is, or nobody can be sent
+              to it. Allow location access, or step outside and try again.
             </p>
             <div class="actions">
               <button class="btn-ghost" type="button" (click)="close()">Cancel report</button>
@@ -401,11 +422,18 @@ export class CameraCapture implements OnDestroy {
     this.accuracy.set(null);
 
     try {
-      // Holds out for a fix a crew could actually walk to, rather than taking
-      // the first coarse estimate the device happens to offer.
-      this.fix = await watchPreciseFix((partial) =>
-        this.accuracy.set(Math.round(partial.accuracy)),
-      );
+      // Holds out for a fix a crew could walk to, but settles for the best the
+      // device can manage rather than turning a real report away.
+      this.fix = await watchBestFix((partial) => this.accuracy.set(Math.round(partial.accuracy)));
+      this.accuracy.set(Math.round(this.fix.accuracy));
+
+      // A rough fix is worth filing, but not worth filing silently — the
+      // citizen is the one person who can still walk ten steps and fix it.
+      if (!this.fix.precise) {
+        this.stage.set('location-coarse');
+        return;
+      }
+
       this.finish();
     } catch (error) {
       this.error.set(explainGeolocationError(error));
@@ -423,10 +451,10 @@ export class CameraCapture implements OnDestroy {
       return;
     }
 
-    // Nothing reaches the page without coordinates. Every path that used to
-    // skip this step is gone; this is the backstop that keeps it that way.
+    // Nothing reaches the page without coordinates. A coarse fix is allowed
+    // through — flagged as such — but no fix at all is not.
     if (!this.fix) {
-      this.error.set('A report needs its exact location.');
+      this.error.set('No coordinates were captured for this photo.');
       this.stage.set('location-failed');
       return;
     }

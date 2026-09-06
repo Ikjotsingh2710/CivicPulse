@@ -2,11 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import {
-  REQUIRED_ACCURACY_M,
-  explainGeolocationError,
-  watchPreciseFix,
-} from '../../core/geolocate';
+import { REQUIRED_ACCURACY_M, explainGeolocationError, watchBestFix } from '../../core/geolocate';
 
 import { AuthService } from '../../core/auth.service';
 import { MediaService } from '../../core/media.service';
@@ -122,6 +118,9 @@ import { CameraCapture, type CapturedLocation } from '../../shared/camera-captur
                   {{ latitude() | number: '1.5-5' }}, {{ longitude() | number: '1.5-5' }}
                   @if (accuracy(); as m) {
                     · ±{{ m | number: '1.0-0' }}m
+                    @if (m > required) {
+                      <b class="rough">approximate area</b>
+                    }
                   }
                 </span>
               }
@@ -206,6 +205,11 @@ import { CameraCapture, type CapturedLocation } from '../../shared/camera-captur
       font-size: 0.82rem;
     }
 
+    /* Amber rather than red: a rough pin is filable, just worth improving. */
+    .rough {
+      color: var(--warn, #b45309);
+    }
+
     .count {
       display: block;
       text-align: right;
@@ -264,6 +268,8 @@ export class ReportPage {
   protected departmentEmail = '';
 
   protected readonly limit = DESCRIPTION_LIMIT;
+  /** Above this the pin names an area, and the form says so. */
+  protected readonly required = REQUIRED_ACCURACY_M;
   protected readonly description = signal('');
 
   protected readonly latitude = signal<number | null>(null);
@@ -311,7 +317,7 @@ export class ReportPage {
     this.locating.set(true);
     this.locationError.set(null);
 
-    void watchPreciseFix((partial) => this.accuracy.set(partial.accuracy))
+    void watchBestFix((partial) => this.accuracy.set(partial.accuracy))
       .then((fix) => {
         this.latitude.set(fix.latitude);
         this.longitude.set(fix.longitude);
@@ -334,17 +340,11 @@ export class ReportPage {
       return;
     }
 
-    // Exact coordinates are what makes a report actionable. An area name tells
-    // a crew which city to drive to, not which spot to repair.
-    const metres = this.accuracy();
+    // Coordinates are what makes a report actionable — a ward name tells a crew
+    // which city to drive to, not which spot to repair. A coarse fix is still
+    // accepted, and flagged, because an approximate area beats no report.
     if (this.latitude() === null || this.longitude() === null) {
-      this.error.set('Capture the location before filing — a crew needs the exact spot.');
-      return;
-    }
-    if (metres !== null && metres > REQUIRED_ACCURACY_M) {
-      this.error.set(
-        `That fix is only accurate to ${Math.round(metres)}m. Move outdoors and capture it again.`,
-      );
+      this.error.set('Capture the location before filing — a crew needs somewhere to go.');
       return;
     }
 

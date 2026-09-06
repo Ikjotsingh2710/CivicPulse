@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import { REQUIRED_ACCURACY_M } from '../../core/geolocate';
 import { MediaService } from '../../core/media.service';
 import { PhotoZoom } from '../../shared/photo-zoom';
 import { PhotoSrc } from '../../shared/photo-src';
@@ -120,11 +121,28 @@ import {
               <!-- A report without a geotag used to show nothing at all, which
                    left the desk with no way to find the place. The ward is
                    always present, so it can at least open the right area —
-                   labelled approximate so it is never mistaken for a pin. -->
+                   labelled approximate so it is never mistaken for a pin.
+
+                   The same principle applies one level up: a fix accurate to
+                   800m is a circle, not a pin, and calling it one would send a
+                   crew looking for a pothole that is not there. -->
               @if (ticket.latitude !== null && ticket.longitude !== null) {
                 <a class="map" target="_blank" rel="noopener" [href]="mapUrl(ticket)"
-                  >View pin on map ↗</a
+                  >{{ isPrecise(ticket) ? 'View pin on map' : 'View area on map' }} ↗</a
                 >
+                @if (ticket.location_accuracy_m; as metres) {
+                  <span
+                    class="nogeo"
+                    [class.approx]="!isPrecise(ticket)"
+                    [title]="
+                      isPrecise(ticket)
+                        ? 'GPS fix — the pin is where the photo was taken'
+                        : 'The device could not see enough satellites; this locates an area'
+                    "
+                    >{{ isPrecise(ticket) ? 'exact' : 'approximate' }} ·
+                    {{ accuracyLabel(metres) }}</span
+                  >
+                }
               } @else {
                 <a class="map approx" target="_blank" rel="noopener" [href]="wardMapUrl(ticket)"
                   >Search {{ ticket.ward_location }} on map ↗</a
@@ -540,6 +558,23 @@ export class AdminReports {
   }
 
   /**
+   * Whether the coordinates name a spot or an area.
+   *
+   * Reports filed before accuracy was recorded have no number to judge; they
+   * are treated as precise because that is how they were already being shown,
+   * and inventing doubt about them would be as misleading as inventing
+   * confidence.
+   */
+  protected isPrecise(ticket: GrievanceTicket): boolean {
+    return ticket.location_accuracy_m === null || ticket.location_accuracy_m <= REQUIRED_ACCURACY_M;
+  }
+
+  /** Metres up close, kilometres once metres stop being readable at a glance. */
+  protected accuracyLabel(metres: number): string {
+    return metres >= 1000 ? `±${(metres / 1000).toFixed(1)}km` : `±${Math.round(metres)}m`;
+  }
+
+  /**
    * Falls back to the ward when a report carries no coordinates.
    *
    * Not a pin — a search for the named place. It is the difference between the
@@ -589,6 +624,8 @@ export class AdminReports {
         'Description',
         'Latitude',
         'Longitude',
+        'Accuracy (m)',
+        'Location quality',
         'Photo',
         'Resolution photo',
       ],
@@ -604,6 +641,8 @@ export class AdminReports {
         ticket.description,
         ticket.latitude,
         ticket.longitude,
+        ticket.location_accuracy_m,
+        ticket.latitude === null ? 'No coordinates' : this.isPrecise(ticket) ? 'Exact' : 'Approximate',
         ticket.image_url,
         ticket.resolution_image_url,
       ]),

@@ -29,6 +29,15 @@ export interface Fix {
   longitude: number;
   /** Radius of uncertainty in metres, as reported by the device. */
   accuracy: number;
+  /**
+   * True when the fix is tight enough to walk to, false when it is the best the
+   * device could manage and describes an area rather than a spot.
+   *
+   * Both are worth filing — a rough pin still tells a desk which street to look
+   * at — but they must never be presented as the same thing, so this travels
+   * with the coordinates all the way to the ward desk.
+   */
+  precise: boolean;
 }
 
 /**
@@ -39,12 +48,13 @@ export interface Fix {
 export const COARSE_FIX_METRES = 150;
 
 /**
- * The worst fix still worth calling a location.
+ * The line between a spot and an area.
  *
- * GPS outdoors lands at 5-20m and in an urban street at 20-60m; anything past
- * about a hundred metres came from wifi or a cell tower and describes a
- * neighbourhood, not a pothole. A report is required to carry a fix at least
- * this good, because a crew sent to a 2km circle has not been told anything.
+ * GPS outdoors lands at 5-20m and in an urban street at 20-60m; past about a
+ * hundred metres the fix came from wifi or a cell tower and describes a
+ * neighbourhood. A fix at or under this is a pin a crew can walk to; beyond it
+ * the report still gets filed, but as an approximate location that says which
+ * area to look in rather than pretending to name a spot.
  */
 export const REQUIRED_ACCURACY_M = 100;
 
@@ -88,17 +98,24 @@ export function explainGeolocationError(error: unknown): string {
 
 
 /**
- * Waits for a fix good enough to send a crew to.
+ * Gets the best location the device can give, holding out for a precise one.
  *
- * `getCurrentPosition` hands back the first fix the device produces, which on
- * a cold start is usually the coarse network estimate — the very thing that
- * makes a report unusable. `watchPosition` keeps delivering improvements as the
- * GPS converges, so this holds on until one is actually precise.
+ * `getCurrentPosition` hands back the first fix the device produces, which on a
+ * cold start is the coarse network estimate — a neighbourhood, not a pothole.
+ * `watchPosition` keeps delivering improvements as the GPS converges, so this
+ * waits for one tight enough to walk to.
+ *
+ * If that never arrives it resolves anyway, with the best fix seen and
+ * `precise: false`. A citizen standing over a burst pipe indoors should not be
+ * turned away because their phone cannot see a satellite; a rough pin still
+ * tells the desk which street to send someone to. The only outright failures
+ * are a refused permission and a device that produced no fix at all, because
+ * neither leaves anything to record.
  *
  * `onProgress` receives every intermediate fix, so the UI can show the accuracy
  * tightening rather than presenting an unexplained wait.
  */
-export function watchPreciseFix(
+export function watchBestFix(
   onProgress?: (fix: Fix) => void,
   targetMetres: number = REQUIRED_ACCURACY_M,
 ): Promise<Fix> {
@@ -128,31 +145,23 @@ export function watchPreciseFix(
       if (done || !best) return;
       done = true;
       stop();
-      resolve(best);
+      resolve({ ...best, precise: best.accuracy <= targetMetres });
     };
 
     timer = setTimeout(() => {
       if (done) return;
 
-      // A fix that arrived just before the deadline may still be inside its
-      // settling window. It qualified; running out of time is no reason to
-      // throw it away and send the citizen back to the start.
-      if (best && best.accuracy <= targetMetres) {
+      // Time is up. Whatever the device managed is what the report gets — a
+      // fix marked imprecise still names an area, which beats refusing a
+      // genuine problem because the sky was not visible from where it was.
+      if (best) {
         finish();
         return;
       }
 
       done = true;
       stop();
-      // Hand back the best seen so the caller can say how close it got, rather
-      // than reporting a bare failure after forty-five seconds of waiting.
-      const error = new Error(
-        best
-          ? `Best fix was accurate to ${Math.round(best.accuracy)}m, which is not precise enough.`
-          : 'No location fix arrived.',
-      );
-      (error as Error & { best?: Fix }).best = best ?? undefined;
-      reject(error);
+      reject(new Error('Your device could not get a location fix at all.'));
     }, WATCH_TIMEOUT_MS);
 
     watchId = navigator.geolocation.watchPosition(
@@ -161,6 +170,7 @@ export function watchPreciseFix(
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           accuracy: position.coords.accuracy,
+          precise: position.coords.accuracy <= targetMetres,
         };
 
         if (!best || fix.accuracy < best.accuracy) best = fix;
