@@ -1,20 +1,19 @@
+import { Component, ElementRef, OnDestroy, computed, effect, output, signal, viewChild } from '@angular/core';
 import {
-  Component,
-  ElementRef,
-  OnDestroy,
-  effect,
-  output,
-  signal,
-  viewChild,
-} from '@angular/core';
-import { explainGeolocationError, getFix } from '../core/geolocate';
+  REQUIRED_ACCURACY_M,
+  explainGeolocationError,
+  watchPreciseFix,
+} from '../core/geolocate';
 import { inspectImage, type ImageVerdict } from '../core/image-check';
 
 export interface CapturedLocation {
   latitude: number;
   longitude: number;
-  /** Radius of uncertainty in metres. Null when the device did not report one. */
-  accuracy: number | null;
+  /**
+   * Radius of uncertainty in metres. Not optional: a fix only leaves this
+   * component once it is precise enough to file, so there is always a number.
+   */
+  accuracy: number;
 }
 
 type Stage =
@@ -103,14 +102,14 @@ type Stage =
 
           @case ('location-consent') {
             <p class="step">Step 2 of 2</p>
-            <h2>Add the location</h2>
+            <h2>Pin the exact spot</h2>
             <img class="thumb" [src]="previewUrl()" alt="Captured photo" />
             <p class="muted">
-              A geotag is how crews find the exact spot. It is read from this device now, so it
-              matches where the photo was taken.
+              A crew has to walk to this problem, so the report carries the exact coordinates read
+              from this device — not the name of the area. Location is required.
             </p>
             <div class="actions">
-              <button class="btn-ghost" type="button" (click)="finish()">Skip</button>
+              <button class="btn-ghost" type="button" (click)="close()">Cancel</button>
               <button class="btn-slate" type="button" (click)="requestLocation()">
                 Allow location
               </button>
@@ -118,35 +117,31 @@ type Stage =
           }
 
           @case ('locating') {
-            <h2>Getting your location…</h2>
-            @if (slowFix()) {
-              <p class="muted">
-                GPS is taking a moment — this is normal indoors. Trying a rougher fix from the
-                network instead.
-              </p>
+            <h2>Pinpointing…</h2>
+            @if (accuracy(); as metres) {
+              <!-- Showing the number tightening turns an unexplained wait into
+                   visible progress, and tells the citizen when to step outside. -->
+              <p class="accuracy">Accurate to <b>{{ metres }}m</b> — holding out for {{ required }}m</p>
+              <div class="meter" role="img" [attr.aria-label]="'Accurate to ' + metres + ' metres'">
+                <span [style.width.%]="closeness()"></span>
+              </div>
             } @else {
-              <p class="muted">
-                Accept your browser's permission prompt. A GPS fix can take up to half a minute
-                outdoors.
-              </p>
+              <p class="muted">Accept the permission prompt to continue.</p>
             }
-            <div class="actions">
-              <button class="btn-ghost" type="button" (click)="finish()">
-                Skip and file without it
-              </button>
-            </div>
+            <p class="muted hint">
+              GPS needs a clear view of the sky. If this stalls, step outside or near a window.
+            </p>
           }
 
           @case ('location-failed') {
-            <h2>Location unavailable</h2>
+            <h2>Not precise enough yet</h2>
             <p class="alert alert-error">{{ error() }}</p>
             <p class="muted">
-              You can still file the report — the ward and your description will have to place it.
+              A report cannot be filed without its exact spot — an approximate area would send a
+              crew somewhere the problem is not. Step outside or near a window and try again.
             </p>
             <div class="actions">
-              <button class="btn-ghost" type="button" (click)="finish()">
-                Continue without it
-              </button>
+              <button class="btn-ghost" type="button" (click)="close()">Cancel report</button>
               <button class="btn-slate" type="button" (click)="requestLocation()">Try again</button>
             </div>
           }
@@ -164,6 +159,37 @@ type Stage =
     </div>
   `,
   styles: `
+    .accuracy {
+      margin: 4px 0 8px;
+      font-size: 0.95rem;
+      color: var(--ink);
+    }
+
+    .accuracy b {
+      font-variant-numeric: tabular-nums;
+      color: var(--accent-strong);
+    }
+
+    .meter {
+      height: 6px;
+      border-radius: 999px;
+      background: var(--surface-sunken);
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .meter span {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      background: var(--accent);
+      transition: width 0.4s ease;
+    }
+
+    .hint {
+      font-size: 0.84rem;
+    }
+
     .scrim {
       position: fixed;
       inset: 0;
@@ -250,8 +276,16 @@ export class CameraCapture implements OnDestroy {
   protected readonly stage = signal<Stage>('camera-consent');
   protected readonly error = signal<string | null>(null);
   protected readonly previewUrl = signal<string | null>(null);
-  /** True once GPS has given up and the coarse network fix is being tried. */
-  protected readonly slowFix = signal(false);
+  /** Live accuracy in metres while the fix converges. */
+  protected readonly accuracy = signal<number | null>(null);
+  protected readonly required = REQUIRED_ACCURACY_M;
+
+  /** 0-100: how close the current fix is to being good enough. */
+  protected readonly closeness = computed(() => {
+    const metres = this.accuracy();
+    if (metres === null) return 0;
+    return Math.max(4, Math.min(100, Math.round((REQUIRED_ACCURACY_M / metres) * 100)));
+  });
   /** Pre-upload quality verdict, computed on this device after capture. */
   protected readonly quality = signal<ImageVerdict | null>(null);
 
@@ -358,10 +392,14 @@ export class CameraCapture implements OnDestroy {
 
   async requestLocation(): Promise<void> {
     this.stage.set('locating');
-    this.slowFix.set(false);
+    this.accuracy.set(null);
 
     try {
-      this.fix = await getFix(() => this.slowFix.set(true));
+      // Holds out for a fix a crew could actually walk to, rather than taking
+      // the first coarse estimate the device happens to offer.
+      this.fix = await watchPreciseFix((partial) =>
+        this.accuracy.set(Math.round(partial.accuracy)),
+      );
       this.finish();
     } catch (error) {
       this.error.set(explainGeolocationError(error));
@@ -379,7 +417,15 @@ export class CameraCapture implements OnDestroy {
       return;
     }
 
-    if (this.fix) this.located.emit(this.fix);
+    // Nothing reaches the page without coordinates. Every path that used to
+    // skip this step is gone; this is the backstop that keeps it that way.
+    if (!this.fix) {
+      this.error.set('A report needs its exact location.');
+      this.stage.set('location-failed');
+      return;
+    }
+
+    this.located.emit(this.fix);
 
     const file = new File([this.blob], `civicpulse-${Date.now()}.jpg`, { type: 'image/jpeg' });
     this.captured.emit(file);

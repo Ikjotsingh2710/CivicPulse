@@ -1525,16 +1525,25 @@ export class HomePage {
 
   private async createTicket(): Promise<void> {
     const campus = this.campus()!;
-    const imageUrl = await this.media.upload(this.photo!, 'reports');
     const fix = this.location();
+
+    // The capture flow will not hand back a draft without coordinates, so this
+    // only fires if something upstream changed. Better a clear refusal than a
+    // report a crew cannot be sent to.
+    if (!fix) {
+      throw new Error('This report has no location. Retake the photo to capture one.');
+    }
+
+    const imageUrl = await this.media.upload(this.photo!, 'reports');
 
     const ticket = await this.tickets.create({
       category: this.category()!,
       ward_location: campus.name,
       image_url: imageUrl,
       description: this.description().trim().slice(0, DESCRIPTION_LIMIT) || null,
-      latitude: fix?.latitude ?? null,
-      longitude: fix?.longitude ?? null,
+      latitude: fix.latitude,
+      longitude: fix.longitude,
+      location_accuracy_m: Math.round(fix.accuracy),
     });
 
     this.filed.set(ticket);

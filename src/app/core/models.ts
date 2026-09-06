@@ -109,6 +109,8 @@ export interface GrievanceTicket {
   urgency: TicketUrgency;
   latitude: number | null;
   longitude: number | null;
+  /** Radius of the fix in metres. Small means a crew can walk straight to it. */
+  location_accuracy_m: number | null;
   ward_location: string;
   image_url: string;
   status: TicketStatus;
@@ -129,7 +131,13 @@ export type NewGrievanceTicket = Pick<
   Partial<
     Pick<
       GrievanceTicket,
-      'user_name' | 'description' | 'urgency' | 'latitude' | 'longitude' | 'department_email'
+      | 'user_name'
+      | 'description'
+      | 'urgency'
+      | 'latitude'
+      | 'longitude'
+      | 'location_accuracy_m'
+      | 'department_email'
     >
   >;
 

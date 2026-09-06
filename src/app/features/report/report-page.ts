@@ -2,7 +2,11 @@ import { DecimalPipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { explainGeolocationError, getFix } from '../../core/geolocate';
+import {
+  REQUIRED_ACCURACY_M,
+  explainGeolocationError,
+  watchPreciseFix,
+} from '../../core/geolocate';
 
 import { AuthService } from '../../core/auth.service';
 import { MediaService } from '../../core/media.service';
@@ -116,6 +120,9 @@ import { CameraCapture, type CapturedLocation } from '../../shared/camera-captur
               @if (latitude() !== null) {
                 <span class="muted coords">
                   {{ latitude() | number: '1.5-5' }}, {{ longitude() | number: '1.5-5' }}
+                  @if (accuracy(); as m) {
+                    · ±{{ m | number: '1.0-0' }}m
+                  }
                 </span>
               }
             </div>
@@ -304,11 +311,12 @@ export class ReportPage {
     this.locating.set(true);
     this.locationError.set(null);
 
-    void getFix()
+    void watchPreciseFix((partial) => this.accuracy.set(partial.accuracy))
       .then((fix) => {
         this.latitude.set(fix.latitude);
         this.longitude.set(fix.longitude);
         this.accuracy.set(fix.accuracy);
+        this.locationError.set(null);
       })
       .catch((error) => this.locationError.set(explainGeolocationError(error)))
       .finally(() => this.locating.set(false));
@@ -323,6 +331,20 @@ export class ReportPage {
     }
     if (!this.wardLocation.trim()) {
       this.error.set('Enter the ward or campus location.');
+      return;
+    }
+
+    // Exact coordinates are what makes a report actionable. An area name tells
+    // a crew which city to drive to, not which spot to repair.
+    const metres = this.accuracy();
+    if (this.latitude() === null || this.longitude() === null) {
+      this.error.set('Capture the location before filing — a crew needs the exact spot.');
+      return;
+    }
+    if (metres !== null && metres > REQUIRED_ACCURACY_M) {
+      this.error.set(
+        `That fix is only accurate to ${Math.round(metres)}m. Move outdoors and capture it again.`,
+      );
       return;
     }
 
@@ -397,6 +419,7 @@ export class ReportPage {
       image_url: imageUrl,
       latitude: this.latitude(),
       longitude: this.longitude(),
+      location_accuracy_m: this.accuracy() === null ? null : Math.round(this.accuracy()!),
       department_email: this.departmentEmail.trim() || null,
     });
 

@@ -30,50 +30,18 @@ export interface Fix {
  */
 export const COARSE_FIX_METRES = 150;
 
-/** GPS deserves a realistic window; a cold start is routinely 20-30 seconds. */
-const PRECISE = { enableHighAccuracy: true, timeout: 30_000, maximumAge: 60_000 };
-
-/** Wifi and cell towers. Coarse, but usually answers in a second or two. */
-const COARSE = { enableHighAccuracy: false, timeout: 15_000, maximumAge: 300_000 };
-
-function once(options: PositionOptions): Promise<Fix> {
-  return new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(
-      (position) =>
-        resolve({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-        }),
-      reject,
-      options,
-    );
-  });
-}
-
 /**
- * Tries GPS, then falls back to a network fix.
+ * The worst fix still worth calling a location.
  *
- * `onFallback` fires when the first attempt gives up, so the UI can explain the
- * wait instead of appearing frozen.
+ * GPS outdoors lands at 5-20m and in an urban street at 20-60m; anything past
+ * about a hundred metres came from wifi or a cell tower and describes a
+ * neighbourhood, not a pothole. A report is required to carry a fix at least
+ * this good, because a crew sent to a 2km circle has not been told anything.
  */
-export async function getFix(onFallback?: () => void): Promise<Fix> {
-  if (!navigator.geolocation) {
-    throw new Error('This browser cannot share a location.');
-  }
+export const REQUIRED_ACCURACY_M = 100;
 
-  try {
-    return await once(PRECISE);
-  } catch (error) {
-    const failure = error as GeolocationPositionError;
-
-    // Retrying a refused permission just prompts again and fails again.
-    if (failure?.code === failure?.PERMISSION_DENIED) throw failure;
-
-    onFallback?.();
-    return await once(COARSE);
-  }
-}
+/** How long to keep improving a fix before admitting it will not get better. */
+const WATCH_TIMEOUT_MS = 45_000;
 
 export function explainGeolocationError(error: unknown): string {
   const failure = error as GeolocationPositionError;
@@ -89,4 +57,78 @@ export function explainGeolocationError(error: unknown): string {
   }
 
   return (error as Error)?.message || 'Could not read your location.';
+}
+
+
+/**
+ * Waits for a fix good enough to send a crew to.
+ *
+ * `getCurrentPosition` hands back the first fix the device produces, which on
+ * a cold start is usually the coarse network estimate — the very thing that
+ * makes a report unusable. `watchPosition` keeps delivering improvements as the
+ * GPS converges, so this holds on until one is actually precise.
+ *
+ * `onProgress` receives every intermediate fix, so the UI can show the accuracy
+ * tightening rather than presenting an unexplained wait.
+ */
+export function watchPreciseFix(
+  onProgress?: (fix: Fix) => void,
+  targetMetres: number = REQUIRED_ACCURACY_M,
+): Promise<Fix> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('This browser cannot share a location.'));
+      return;
+    }
+
+    let best: Fix | null = null;
+    let watchId: number | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const stop = () => {
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      if (timer !== null) clearTimeout(timer);
+      watchId = null;
+      timer = null;
+    };
+
+    timer = setTimeout(() => {
+      stop();
+      // Hand back the best seen so the caller can say how close it got, rather
+      // than reporting a bare failure after forty-five seconds of waiting.
+      const error = new Error(
+        best
+          ? `Best fix was accurate to ${Math.round(best.accuracy)}m, which is not precise enough.`
+          : 'No location fix arrived.',
+      );
+      (error as Error & { best?: Fix }).best = best ?? undefined;
+      reject(error);
+    }, WATCH_TIMEOUT_MS);
+
+    watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const fix: Fix = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        };
+
+        if (!best || fix.accuracy < best.accuracy) best = fix;
+        onProgress?.(fix);
+
+        if (fix.accuracy <= targetMetres) {
+          stop();
+          resolve(fix);
+        }
+      },
+      (error) => {
+        // A refused permission will not improve by waiting.
+        if (error.code === error.PERMISSION_DENIED) {
+          stop();
+          reject(error);
+        }
+      },
+      { enableHighAccuracy: true, timeout: WATCH_TIMEOUT_MS, maximumAge: 0 },
+    );
+  });
 }
