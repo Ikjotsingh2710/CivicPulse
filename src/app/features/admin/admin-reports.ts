@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { REQUIRED_ACCURACY_M } from '../../core/geolocate';
+import { EXACT_ACCURACY_M } from '../../core/geolocate';
 import { MediaService } from '../../core/media.service';
 import { PhotoZoom } from '../../shared/photo-zoom';
 import { PhotoSrc } from '../../shared/photo-src';
@@ -137,7 +137,7 @@ import {
                     [title]="
                       isPrecise(ticket)
                         ? 'GPS fix — the pin is where the photo was taken'
-                        : 'The device could not see enough satellites; this locates an area'
+                        : 'Weaker fix — the right block, but the crew will have to look around'
                     "
                     >{{ isPrecise(ticket) ? 'exact' : 'approximate' }} ·
                     {{ accuracyLabel(metres) }}</span
@@ -566,7 +566,7 @@ export class AdminReports {
    * confidence.
    */
   protected isPrecise(ticket: GrievanceTicket): boolean {
-    return ticket.location_accuracy_m === null || ticket.location_accuracy_m <= REQUIRED_ACCURACY_M;
+    return ticket.location_accuracy_m === null || ticket.location_accuracy_m <= EXACT_ACCURACY_M;
   }
 
   /** Metres up close, kilometres once metres stop being readable at a glance. */

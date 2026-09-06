@@ -48,24 +48,24 @@ export interface Fix {
 export const COARSE_FIX_METRES = 150;
 
 /**
- * The line between a spot and an area.
+ * The worst fix that may be filed at all. Past this the report is refused.
  *
- * GPS outdoors lands at 5-20m and in an urban street at 20-60m; past about a
- * hundred metres the fix came from wifi or a cell tower and describes a
- * neighbourhood. A fix at or under this is a pin a crew can walk to; beyond it
- * the report still gets filed, but as an approximate location that says which
- * area to look in rather than pretending to name a spot.
+ * A hundred metres is roughly a city block. Inside it a crew arrives and looks
+ * around; outside it they are searching a neighbourhood for a pothole, which is
+ * indistinguishable from having no location. Approximate is allowed, vague is
+ * not, and this is where the line sits.
  */
 export const REQUIRED_ACCURACY_M = 100;
 
 /**
- * Good enough that waiting longer is not worth a citizen's patience.
+ * The line between a spot and an area, both of which are filable.
  *
- * This is satellite-grade — it puts the pin on the right side of the road. The
- * remaining few metres are the hardware's noise floor, not something more time
- * will remove.
+ * GPS outdoors lands at 5-20m and in a street between buildings at 20-60m. At
+ * or under this the pin is on the right side of the road and a crew walks
+ * straight to it. Between here and REQUIRED_ACCURACY_M the fix still names a
+ * block, and the report is filed and labelled approximate rather than lost.
  */
-const EXCELLENT_ACCURACY_M = 20;
+export const EXACT_ACCURACY_M = 30;
 
 /**
  * How long to keep watching after a fix first crosses the threshold.
@@ -98,26 +98,29 @@ export function explainGeolocationError(error: unknown): string {
 
 
 /**
- * Gets the best location the device can give, holding out for a precise one.
+ * Gets the best location the device can give, within a hundred metres.
  *
  * `getCurrentPosition` hands back the first fix the device produces, which on a
  * cold start is the coarse network estimate — a neighbourhood, not a pothole.
  * `watchPosition` keeps delivering improvements as the GPS converges, so this
  * waits for one tight enough to walk to.
  *
- * If that never arrives it resolves anyway, with the best fix seen and
- * `precise: false`. A citizen standing over a burst pipe indoors should not be
- * turned away because their phone cannot see a satellite; a rough pin still
- * tells the desk which street to send someone to. The only outright failures
- * are a refused permission and a device that produced no fix at all, because
- * neither leaves anything to record.
+ * Two outcomes count as success, and they are not the same thing:
+ *
+ *   accuracy <= EXACT_ACCURACY_M      a pin. `precise: true`.
+ *   accuracy <= ceilingMetres         a block. Filed, `precise: false`.
+ *
+ * Past the ceiling nothing is filed. That is a deliberate limit rather than a
+ * technical one: a fix describing half a suburb tells a crew as little as no
+ * fix at all, and recording it would put a confident-looking dot on a map that
+ * nobody should trust.
  *
  * `onProgress` receives every intermediate fix, so the UI can show the accuracy
  * tightening rather than presenting an unexplained wait.
  */
 export function watchBestFix(
   onProgress?: (fix: Fix) => void,
-  targetMetres: number = REQUIRED_ACCURACY_M,
+  ceilingMetres: number = REQUIRED_ACCURACY_M,
 ): Promise<Fix> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
@@ -145,23 +148,28 @@ export function watchBestFix(
       if (done || !best) return;
       done = true;
       stop();
-      resolve({ ...best, precise: best.accuracy <= targetMetres });
+      resolve({ ...best, precise: best.accuracy <= EXACT_ACCURACY_M });
     };
 
     timer = setTimeout(() => {
       if (done) return;
 
-      // Time is up. Whatever the device managed is what the report gets — a
-      // fix marked imprecise still names an area, which beats refusing a
-      // genuine problem because the sky was not visible from where it was.
-      if (best) {
+      // Time is up. Anything inside the ceiling is filed — it names a block,
+      // which is enough to send someone to look.
+      if (best && best.accuracy <= ceilingMetres) {
         finish();
         return;
       }
 
       done = true;
       stop();
-      reject(new Error('Your device could not get a location fix at all.'));
+      reject(
+        new Error(
+          best
+            ? `The closest fix was ±${Math.round(best.accuracy)}m, and a report needs ${ceilingMetres}m or better.`
+            : 'Your device could not get a location fix at all.',
+        ),
+      );
     }, WATCH_TIMEOUT_MS);
 
     watchId = navigator.geolocation.watchPosition(
@@ -170,22 +178,23 @@ export function watchBestFix(
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           accuracy: position.coords.accuracy,
-          precise: position.coords.accuracy <= targetMetres,
+          precise: position.coords.accuracy <= EXACT_ACCURACY_M,
         };
 
         if (!best || fix.accuracy < best.accuracy) best = fix;
         onProgress?.(fix);
 
-        // Already as good as the hardware gets. More waiting is just waiting.
-        if (fix.accuracy <= EXCELLENT_ACCURACY_M) {
+        // A pin. Nothing more to wait for — the remaining metres are the
+        // hardware's noise floor, not something more time removes.
+        if (fix.accuracy <= EXACT_ACCURACY_M) {
           finish();
           return;
         }
 
-        // Qualified, but a converging GPS is usually still improving. Keep the
-        // watch open a little longer and take the best of what arrives — the
-        // fix that merely scrapes past the bar is rarely the best one going.
-        if (fix.accuracy <= targetMetres && settle === null) {
+        // Inside the ceiling, so this is already filable — but a converging GPS
+        // is usually still improving, and the fix that merely scrapes past the
+        // bar is rarely the best one going. Keep watching a little longer.
+        if (fix.accuracy <= ceilingMetres && settle === null) {
           settle = setTimeout(finish, SETTLE_MS);
         }
       },

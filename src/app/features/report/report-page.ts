@@ -2,7 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { REQUIRED_ACCURACY_M, explainGeolocationError, watchBestFix } from '../../core/geolocate';
+import { EXACT_ACCURACY_M, explainGeolocationError, watchBestFix } from '../../core/geolocate';
 
 import { AuthService } from '../../core/auth.service';
 import { MediaService } from '../../core/media.service';
@@ -118,8 +118,8 @@ import { CameraCapture, type CapturedLocation } from '../../shared/camera-captur
                   {{ latitude() | number: '1.5-5' }}, {{ longitude() | number: '1.5-5' }}
                   @if (accuracy(); as m) {
                     · ±{{ m | number: '1.0-0' }}m
-                    @if (m > required) {
-                      <b class="rough">approximate area</b>
+                    @if (m > exact) {
+                      <b class="rough">approximate</b>
                     }
                   }
                 </span>
@@ -268,8 +268,8 @@ export class ReportPage {
   protected departmentEmail = '';
 
   protected readonly limit = DESCRIPTION_LIMIT;
-  /** Above this the pin names an area, and the form says so. */
-  protected readonly required = REQUIRED_ACCURACY_M;
+  /** Above this the pin names a block rather than a spot, and the form says so. */
+  protected readonly exact = EXACT_ACCURACY_M;
   protected readonly description = signal('');
 
   protected readonly latitude = signal<number | null>(null);

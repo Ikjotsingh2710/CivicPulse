@@ -1,5 +1,10 @@
 import { Component, ElementRef, OnDestroy, computed, effect, output, signal, viewChild } from '@angular/core';
-import { REQUIRED_ACCURACY_M, explainGeolocationError, watchBestFix } from '../core/geolocate';
+import {
+  EXACT_ACCURACY_M,
+  REQUIRED_ACCURACY_M,
+  explainGeolocationError,
+  watchBestFix,
+} from '../core/geolocate';
 import { inspectImage, type ImageVerdict } from '../core/image-check';
 
 export interface CapturedLocation {
@@ -107,8 +112,8 @@ type Stage =
             <img class="thumb" [src]="previewUrl()" alt="Captured photo" />
             <p class="muted">
               A crew has to walk to this problem, so the report carries the coordinates read from
-              this device rather than the name of the area. We hold out for an exact fix and fall
-              back to the closest one your device can manage.
+              this device rather than the name of the area. We hold out for an exact fix, and file
+              nothing further than {{ required }}m from the spot.
             </p>
             <div class="actions">
               <button class="btn-ghost" type="button" (click)="close()">Cancel</button>
@@ -142,18 +147,18 @@ type Stage =
           }
 
           @case ('location-coarse') {
-            <h2>Only got the general area</h2>
+            <h2>Close, but not exact</h2>
             <p class="muted">
-              Your device could not see enough satellites to pin the exact spot. The best it
-              managed is <b>±{{ accuracy() }}m</b> — enough to tell the desk which area to look
-              in, but not which building.
+              Your device settled at <b>±{{ accuracy() }}m</b>. That is good enough to file — it
+              puts the report on the right block — but a crew would still have to look around
+              rather than walk straight to it.
             </p>
             <p class="muted hint">
-              Stepping outside or away from a window usually fixes this in a few seconds, and a
-              precise pin gets the problem found faster.
+              Stepping outside or away from a building usually gets under {{ exact }}m within a few
+              seconds.
             </p>
             <div class="actions">
-              <button class="btn-ghost" type="button" (click)="finish()">File the area</button>
+              <button class="btn-ghost" type="button" (click)="finish()">File it anyway</button>
               <button class="btn-slate" type="button" (click)="requestLocation()">
                 Try for exact
               </button>
@@ -161,11 +166,12 @@ type Stage =
           }
 
           @case ('location-failed') {
-            <h2>No location at all</h2>
+            <h2>Location not close enough</h2>
             <p class="alert alert-error">{{ error() }}</p>
             <p class="muted">
-              A report needs at least a rough idea of where the problem is, or nobody can be sent
-              to it. Allow location access, or step outside and try again.
+              A report has to land within {{ required }}m of the problem, or nobody can be sent to
+              it. Allow location access if you have not, then step outside or near a window and
+              try again.
             </p>
             <div class="actions">
               <button class="btn-ghost" type="button" (click)="close()">Cancel report</button>
@@ -305,7 +311,10 @@ export class CameraCapture implements OnDestroy {
   protected readonly previewUrl = signal<string | null>(null);
   /** Live accuracy in metres while the fix converges. */
   protected readonly accuracy = signal<number | null>(null);
+  /** The ceiling: past this a report cannot be filed at all. */
   protected readonly required = REQUIRED_ACCURACY_M;
+  /** The goal: at or under this the fix is a pin rather than a block. */
+  protected readonly exact = EXACT_ACCURACY_M;
 
   /** 0-100: how close the current fix is to being good enough. */
   protected readonly closeness = computed(() => {
