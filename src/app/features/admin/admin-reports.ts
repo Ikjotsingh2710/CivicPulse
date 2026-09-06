@@ -117,9 +117,20 @@ import {
               @if (ticket.description) {
                 <p class="body">{{ ticket.description }}</p>
               }
+              <!-- A report without a geotag used to show nothing at all, which
+                   left the desk with no way to find the place. The ward is
+                   always present, so it can at least open the right area —
+                   labelled approximate so it is never mistaken for a pin. -->
               @if (ticket.latitude !== null && ticket.longitude !== null) {
                 <a class="map" target="_blank" rel="noopener" [href]="mapUrl(ticket)"
                   >View pin on map ↗</a
+                >
+              } @else {
+                <a class="map approx" target="_blank" rel="noopener" [href]="wardMapUrl(ticket)"
+                  >Search {{ ticket.ward_location }} on map ↗</a
+                >
+                <span class="nogeo" title="Filed without location permission or before a fix arrived"
+                  >approximate · no geotag</span
                 >
               }
             </div>
@@ -354,6 +365,24 @@ import {
       text-decoration: underline;
     }
 
+    /* Dimmer than a real pin, so the two never read as the same thing. */
+    .map.approx {
+      color: var(--warn);
+    }
+
+    .nogeo {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: var(--warn-soft);
+      color: var(--warn);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      vertical-align: 1px;
+    }
+
     .actions .field {
       margin-top: 12px;
       margin-bottom: 0;
@@ -508,6 +537,19 @@ export class AdminReports {
 
   protected mapUrl(ticket: GrievanceTicket): string {
     return `https://www.google.com/maps?q=${ticket.latitude},${ticket.longitude}`;
+  }
+
+  /**
+   * Falls back to the ward when a report carries no coordinates.
+   *
+   * Not a pin — a search for the named place. It is the difference between the
+   * desk knowing roughly where to look and knowing nothing at all, and the link
+   * text says which it is.
+   */
+  protected wardMapUrl(ticket: GrievanceTicket): string {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      ticket.ward_location,
+    )}`;
   }
 
   protected async reload(): Promise<void> {
