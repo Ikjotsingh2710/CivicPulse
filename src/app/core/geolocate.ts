@@ -1,19 +1,27 @@
 /**
- * Getting a location fix on a real phone, reliably.
+ * Getting the exact spot a report was filed from.
  *
- * The naive call — `getCurrentPosition(ok, fail, { enableHighAccuracy: true,
- * timeout: 15000 })` — fails constantly in the field, for two reasons that are
- * invisible on a desktop during development:
+ * There is no such thing as a coordinate without an error bar. GPS solves a
+ * position by timing signals from satellites 20,000km up; the atmosphere delays
+ * them and buildings reflect them, so the device reports a point *and* the
+ * radius it believes that point is within. `coords.accuracy` is the phone's own
+ * statement of its uncertainty, not an approximation this app introduces. Under
+ * open sky it settles at 3-10m, which is the floor for consumer hardware.
  *
- *   1. `enableHighAccuracy: true` insists on GPS. A cold GPS start takes 20-60
- *      seconds outdoors and frequently never resolves indoors or under cloud.
- *      Fifteen seconds is not a timeout, it is a coin toss.
- *   2. Omitting `maximumAge` refuses any cached position, so a phone that got a
- *      perfectly good fix ten seconds ago is made to start from scratch.
+ * What the app controls is which fixes it is willing to accept, and how long it
+ * waits before deciding. Both matter more than they look:
  *
- * So: accept a recent fix instantly if the device has one, allow GPS a
- * realistic amount of time, and if that still fails fall back to the coarse
- * network fix rather than giving the citizen nothing.
+ *   1. `getCurrentPosition` returns the *first* fix the device produces, which
+ *      on a cold start is the wifi or cell-tower estimate — a neighbourhood,
+ *      not a pothole. So this watches instead, and lets GPS converge.
+ *   2. Stopping the moment a fix squeaks under the bar throws away the good one
+ *      arriving seconds later. A phone that reports 95m is usually mid-descent
+ *      towards 10m, so crossing the threshold starts a short settling window
+ *      rather than ending the search.
+ *
+ * Reading the photo's EXIF instead would gain nothing: it comes from the same
+ * OS provider with the same accuracy, our live capture writes no EXIF, and EXIF
+ * is editable — which is the whole reason capture is live.
  */
 
 export interface Fix {
@@ -39,6 +47,25 @@ export const COARSE_FIX_METRES = 150;
  * this good, because a crew sent to a 2km circle has not been told anything.
  */
 export const REQUIRED_ACCURACY_M = 100;
+
+/**
+ * Good enough that waiting longer is not worth a citizen's patience.
+ *
+ * This is satellite-grade — it puts the pin on the right side of the road. The
+ * remaining few metres are the hardware's noise floor, not something more time
+ * will remove.
+ */
+const EXCELLENT_ACCURACY_M = 20;
+
+/**
+ * How long to keep watching after a fix first crosses the threshold.
+ *
+ * A GPS converging past 100m is typically still descending steeply, so the fix
+ * that merely qualifies is rarely the best one available. Spending a few more
+ * seconds routinely turns a 90m fix into a 10m one; spending much more than
+ * this buys nothing but a citizen standing in the street holding a phone.
+ */
+const SETTLE_MS = 8_000;
 
 /** How long to keep improving a fix before admitting it will not get better. */
 const WATCH_TIMEOUT_MS = 45_000;
@@ -84,15 +111,38 @@ export function watchPreciseFix(
     let best: Fix | null = null;
     let watchId: number | null = null;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    let settle: ReturnType<typeof setTimeout> | null = null;
+    let done = false;
 
     const stop = () => {
       if (watchId !== null) navigator.geolocation.clearWatch(watchId);
       if (timer !== null) clearTimeout(timer);
+      if (settle !== null) clearTimeout(settle);
       watchId = null;
       timer = null;
+      settle = null;
+    };
+
+    /** Take the best fix seen and finish. Guarded so it can only happen once. */
+    const finish = () => {
+      if (done || !best) return;
+      done = true;
+      stop();
+      resolve(best);
     };
 
     timer = setTimeout(() => {
+      if (done) return;
+
+      // A fix that arrived just before the deadline may still be inside its
+      // settling window. It qualified; running out of time is no reason to
+      // throw it away and send the citizen back to the start.
+      if (best && best.accuracy <= targetMetres) {
+        finish();
+        return;
+      }
+
+      done = true;
       stop();
       // Hand back the best seen so the caller can say how close it got, rather
       // than reporting a bare failure after forty-five seconds of waiting.
@@ -116,14 +166,23 @@ export function watchPreciseFix(
         if (!best || fix.accuracy < best.accuracy) best = fix;
         onProgress?.(fix);
 
-        if (fix.accuracy <= targetMetres) {
-          stop();
-          resolve(fix);
+        // Already as good as the hardware gets. More waiting is just waiting.
+        if (fix.accuracy <= EXCELLENT_ACCURACY_M) {
+          finish();
+          return;
+        }
+
+        // Qualified, but a converging GPS is usually still improving. Keep the
+        // watch open a little longer and take the best of what arrives — the
+        // fix that merely scrapes past the bar is rarely the best one going.
+        if (fix.accuracy <= targetMetres && settle === null) {
+          settle = setTimeout(finish, SETTLE_MS);
         }
       },
       (error) => {
         // A refused permission will not improve by waiting.
-        if (error.code === error.PERMISSION_DENIED) {
+        if (error.code === error.PERMISSION_DENIED && !done) {
+          done = true;
           stop();
           reject(error);
         }

@@ -121,7 +121,13 @@ type Stage =
             @if (accuracy(); as metres) {
               <!-- Showing the number tightening turns an unexplained wait into
                    visible progress, and tells the citizen when to step outside. -->
-              <p class="accuracy">Accurate to <b>{{ metres }}m</b> — holding out for {{ required }}m</p>
+              @if (metres <= required) {
+                <!-- Past the bar, but GPS is usually still descending. Say so,
+                     otherwise the extra seconds read as the app being stuck. -->
+                <p class="accuracy">Accurate to <b>{{ metres }}m</b> — sharpening the fix</p>
+              } @else {
+                <p class="accuracy">Accurate to <b>{{ metres }}m</b> — holding out for {{ required }}m</p>
+              }
               <div class="meter" role="img" [attr.aria-label]="'Accurate to ' + metres + ' metres'">
                 <span [style.width.%]="closeness()"></span>
               </div>
