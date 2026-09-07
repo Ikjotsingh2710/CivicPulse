@@ -603,3 +603,16 @@ a.dropdown-item {
 .app-bar.on-dark .lang-btn + .lang-btn {
   border-color: color-mix(in srgb, currentColor 35%, transparent);
 }
+
+
+/* What changed since this device last looked. Amber so it reads as news
+   rather than as a warning — a resolved pothole is good news. */
+.pc-updates {
+  margin: 0 0 12px;
+  padding: 9px 12px;
+  border-radius: var(--radius);
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}

@@ -8,6 +8,7 @@ import { PhotoLightbox } from './shared/photo-lightbox';
 import { ReportToast } from './shared/report-toast';
 import { NotificationsService } from './core/notifications.service';
 import { I18nService } from './core/i18n.service';
+import { UpdatesService } from './core/updates.service';
 
 type RegionMode = 'city' | 'pincode';
 
@@ -31,9 +32,12 @@ export class App {
    * It reads the language signal, so every view using it repaints on a switch.
    */
   protected readonly t = this.i18n.t.bind(this.i18n);
+  /** For statuses stored in English, shown in the updates line. */
+  protected readonly label = this.i18n.label.bind(this.i18n);
 
   protected readonly auth = inject(AuthService);
   protected readonly notifications = inject(NotificationsService);
+  protected readonly updates = inject(UpdatesService);
   private readonly tickets = inject(TicketsService);
   private readonly router = inject(Router);
 

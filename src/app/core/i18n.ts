@@ -525,6 +525,17 @@ export const STRINGS = {
     hi: '{count} शिकायतें उस नंबर का इंतज़ार कर रही हैं जो पोर्टल ने आपको दिया था। नंबर जोड़ने पर CivicPulse दोनों शिकायतें साथ ट्रैक करेगा।',
   },
 
+  'updates.moved': { en: 'Your reports moved', hi: 'आपकी शिकायतें आगे बढ़ीं' },
+  'updates.one': {
+    en: '{ticket} is now {status}.',
+    hi: '{ticket} अब {status} है।',
+  },
+  'updates.many': {
+    en: '{count} of your reports have moved. Open them to see what changed.',
+    hi: 'आपकी {count} शिकायतें आगे बढ़ी हैं। देखने के लिए उन्हें खोलें।',
+  },
+  'updates.menuSub': { en: 'Something changed since you last looked', hi: 'पिछली बार के बाद कुछ बदला है' },
+
   // ------------------------------------------------------------------ common
   'common.loading': { en: 'Loading…', hi: 'लोड हो रहा है…' },
   'common.close': { en: 'Close', hi: 'बंद करें' },

@@ -7,6 +7,7 @@ import { TicketsService } from '../../core/tickets.service';
 import { PhotoZoom } from '../../shared/photo-zoom';
 import { PhotoSrc } from '../../shared/photo-src';
 import { I18nService } from '../../core/i18n.service';
+import { UpdatesService } from '../../core/updates.service';
 import { PortalHandoff } from '../../shared/portal-handoff';
 import { TICKET_PIPELINE, type GrievanceTicket, type TicketStatus } from '../../core/models';
 
@@ -331,6 +332,7 @@ export class ProfilePage {
   protected readonly t = this.i18n.t.bind(this.i18n);
   /** For values stored in English: status pills, category headings. */
   protected readonly label = this.i18n.label.bind(this.i18n);
+  private readonly updates = inject(UpdatesService);
 
   private readonly service = inject(TicketsService);
   protected readonly auth = inject(AuthService);
@@ -373,7 +375,12 @@ export class ProfilePage {
 
   private async load(): Promise<void> {
     try {
-      this.tickets.set(await this.service.listMine());
+      const mine = await this.service.listMine();
+      this.tickets.set(mine);
+
+      // Opening this page is the moment the citizen has actually been told,
+      // so the badge clears here rather than on a timer.
+      void this.updates.acknowledge(mine);
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Could not load your tickets.');
     } finally {

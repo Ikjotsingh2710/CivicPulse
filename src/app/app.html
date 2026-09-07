@@ -102,14 +102,16 @@
         [attr.aria-label]="
           notifications.pending() > 0
             ? t('profile.yourAccount') + ' — ' + notifications.pending()
-            : t('profile.yourAccount')
+            : updates.count() > 0
+              ? t('profile.yourAccount') + ' — ' + updates.count()
+              : t('profile.yourAccount')
         "
         (click)="toggleProfile()"
       >
         <!-- Visible without opening the menu: the desk should know a report has
              landed at a glance. Hidden for citizens, whose pending count is
              always zero. -->
-        @if (notifications.pending() > 0) {
+        @if (notifications.pending() > 0 || updates.count() > 0) {
           <span class="phone-dot" aria-hidden="true"></span>
         }
         <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
@@ -155,14 +157,36 @@
               <p class="pc-error">{{ message }}</p>
             }
 
+            <!-- What moved since this device last looked. Shown here because
+                 the account menu is where someone checks on their own things. -->
+            @if (updates.changes(); as moved) {
+              @if (moved.length > 0) {
+                <p class="pc-updates">
+                  {{
+                    moved.length === 1
+                      ? t('updates.one', {
+                          ticket: moved[0].ticket_number,
+                          status: label('status', moved[0].status),
+                        })
+                      : t('updates.many', { count: moved.length })
+                  }}
+                </p>
+              }
+            }
+
             <!-- Navigation actions -->
             <nav class="pc-links">
               <a class="pc-link" routerLink="/profile" routerLinkActive="active">
                 <span class="pc-icon" aria-hidden="true">📋</span>
                 <span>
                   <span class="pc-link-title">{{ t('profile.myComplaints') }}</span>
-                  <span class="pc-link-sub">{{ t('profile.myComplaintsSub') }}</span>
+                  <span class="pc-link-sub">
+                    {{ updates.count() > 0 ? t('updates.menuSub') : t('profile.myComplaintsSub') }}
+                  </span>
                 </span>
+                @if (updates.count() > 0) {
+                  <span class="pc-badge">{{ updates.count() }}</span>
+                }
               </a>
 
               <a class="pc-link" routerLink="/escalations" routerLinkActive="active">
