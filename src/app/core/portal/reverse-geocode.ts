@@ -21,8 +21,14 @@
 /** Past this, stop waiting and hand off with coordinates instead. */
 const LOOKUP_TIMEOUT_MS = 6_000;
 
-/** Addresses do not change; a repeated lookup of the same spot is waste. */
-const cache = new Map<string, string | null>();
+/** What one lookup yields. The state drives routing; the address is pasted. */
+export interface Place {
+  address: string | null;
+  state: string | null;
+}
+
+/** Places do not change; a repeated lookup of the same spot is waste. */
+const cache = new Map<string, Place>();
 
 interface NominatimAddress {
   road?: string;
@@ -68,10 +74,30 @@ export async function reverseGeocode(
   latitude: number,
   longitude: number,
 ): Promise<string | null> {
+  return (await lookupPlace(latitude, longitude)).address;
+}
+
+/**
+ * The state a fix sits in, for routing to a state grievance portal.
+ *
+ * Shares the cache and the one request with the address lookup, so routing and
+ * formatting a complaint cost a single round trip between them.
+ */
+export async function reverseGeocodeState(
+  latitude: number,
+  longitude: number,
+): Promise<string | null> {
+  return (await lookupPlace(latitude, longitude)).state;
+}
+
+async function lookupPlace(latitude: number, longitude: number): Promise<Place> {
   // Five decimal places is about a metre — finer than any fix we accept, and
   // coarse enough that two reports from the same spot share a cache entry.
   const key = `${latitude.toFixed(5)},${longitude.toFixed(5)}`;
-  if (cache.has(key)) return cache.get(key) ?? null;
+  const hit = cache.get(key);
+  if (hit) return hit;
+
+  const nothing: Place = { address: null, state: null };
 
   const url =
     'https://nominatim.openstreetmap.org/reverse?format=jsonv2' +
@@ -84,18 +110,21 @@ export async function reverseGeocode(
     });
 
     if (!response.ok) {
-      cache.set(key, null);
-      return null;
+      cache.set(key, nothing);
+      return nothing;
     }
 
     const data = (await response.json()) as { address?: NominatimAddress };
-    const address = data.address ? formatAddress(data.address) : null;
+    const place: Place = {
+      address: data.address ? formatAddress(data.address) : null,
+      state: data.address?.state?.trim() || null,
+    };
 
-    cache.set(key, address);
-    return address;
+    cache.set(key, place);
+    return place;
   } catch {
     // Offline, blocked, rate-limited or timed out. All the same to the caller.
-    cache.set(key, null);
-    return null;
+    cache.set(key, nothing);
+    return nothing;
   }
 }

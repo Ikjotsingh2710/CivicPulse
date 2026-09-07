@@ -22,6 +22,7 @@ import type {
   PreparedComplaint,
 } from './portal/connector';
 import { createConnector } from './portal/connector.factory';
+import { reverseGeocodeState } from './portal/reverse-geocode';
 import { candidatesFor, routeComplaint, type RoutingDecision } from './portal/jurisdiction';
 
 /** How long a handoff may sit unconfirmed before /profile nudges about it. */
@@ -104,12 +105,35 @@ export class PortalService {
         });
 
     const portal = portals.find((row) => row.jurisdiction === decision.jurisdiction);
+
+    // A named local body wins outright. Only when the router fell through to
+    // the national portal is it worth asking which state this is, because a
+    // state grievance system reaches the people who actually fix things,
+    // whereas CPGRAMS routes there through Delhi first.
+    if (portal && decision.jurisdiction !== 'CPGRAMS') return { portal, decision };
+
+    const state = await this.stateFor(ticket);
+    const statePortal = state
+      ? portals.find((row) => row.state !== null && row.state === state)
+      : undefined;
+
+    if (statePortal) {
+      return {
+        portal: statePortal,
+        decision: {
+          jurisdiction: statePortal.jurisdiction,
+          reason: `${state} runs its own grievance system, which reaches every district in the state.`,
+          confident: true,
+        },
+      };
+    }
+
     if (portal) return { portal, decision };
 
-    // The router named a body the directory does not carry — a seed that never
-    // ran, or a row deactivated after this build shipped. CPGRAMS reaches every
-    // department nationally, so fall to it rather than dropping the handoff.
-    const national = portals.find((row) => row.city === null);
+    // No local body, no state portal, and the router's choice is not in the
+    // directory — a seed that never ran, or a row deactivated after this build
+    // shipped. The national portal is the floor beneath everything.
+    const national = portals.find((row) => row.city === null && row.state === null);
     if (!national) return null;
 
     return {
@@ -120,6 +144,24 @@ export class PortalService {
         confident: false,
       },
     };
+  }
+
+  /**
+   * Which state a report was filed from.
+   *
+   * Asked of the map only when it will change the answer, and only on the
+   * fallback path — a Delhi pothole never triggers a network call. A failed
+   * lookup returns null and the report goes to CPGRAMS, which is where it
+   * would have gone anyway, so nothing depends on the map being reachable.
+   */
+  private async stateFor(ticket: GrievanceTicket): Promise<string | null> {
+    if (ticket.latitude === null || ticket.longitude === null) return null;
+
+    try {
+      return await reverseGeocodeState(ticket.latitude, ticket.longitude);
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -152,9 +194,25 @@ export class PortalService {
       wardLocation: ticket.ward_location,
     });
 
-    return codes
+    const offered = codes
       .map((code) => portals.find((portal) => portal.jurisdiction === code))
       .filter((portal): portal is Portal => portal !== undefined);
+
+    // Slot the state system in above the national one: someone rejecting the
+    // local body usually wants the level immediately above it, not Delhi.
+    const state = await this.stateFor(ticket);
+    const statePortal = state
+      ? portals.find((portal) => portal.state !== null && portal.state === state)
+      : undefined;
+
+    if (!statePortal || offered.some((portal) => portal.jurisdiction === statePortal.jurisdiction)) {
+      return offered;
+    }
+
+    const national = offered.findIndex((portal) => portal.jurisdiction === 'CPGRAMS');
+    if (national === -1) return [...offered, statePortal];
+
+    return [...offered.slice(0, national), statePortal, ...offered.slice(national)];
   }
 
   /** Formats a complaint for a portal, ahead of the citizen's click. */

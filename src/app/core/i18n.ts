@@ -573,6 +573,65 @@ export const STRINGS = {
     hi: 'मैंने यह CivicPulse पर दर्ज किया है। अगर आपको भी यही समस्या है, तो अपना समर्थन जोड़ें:',
   },
 
+  'portal.covers.GHMC': {
+    en: 'Greater Hyderabad — roads, waste, drains, streetlights',
+    hi: 'ग्रेटर हैदराबाद — सड़कें, कूड़ा, नालियाँ, स्ट्रीटलाइट',
+  },
+  'portal.covers.KMC': {
+    en: 'Kolkata — roads, water, waste, drainage, streetlights',
+    hi: 'कोलकाता — सड़कें, पानी, कूड़ा, जल-निकासी, स्ट्रीटलाइट',
+  },
+  'portal.covers.AMC': {
+    en: 'Ahmedabad — civic complaints through the CCRS system',
+    hi: 'अहमदाबाद — CCRS प्रणाली से नागरिक शिकायतें',
+  },
+
+  // State grievance systems. Each takes any complaint against any department
+  // in that state, which is why one row covers every district in it.
+  'portal.covers.MH-STATE': {
+    en: 'All of Maharashtra — any department, resolved within 21 working days',
+    hi: 'पूरा महाराष्ट्र — कोई भी विभाग, 21 कार्य दिवसों में समाधान',
+  },
+  'portal.covers.UP-STATE': {
+    en: 'All of Uttar Pradesh — every district, with reminders and appeals',
+    hi: 'पूरा उत्तर प्रदेश — हर ज़िला, रिमाइंडर और अपील के साथ',
+  },
+  'portal.covers.BR-STATE': {
+    en: 'All of Bihar — a 60-day statutory deadline and two levels of appeal',
+    hi: 'पूरा बिहार — 60 दिन की क़ानूनी समय-सीमा और अपील के दो स्तर',
+  },
+  'portal.covers.RJ-STATE': {
+    en: 'All of Rajasthan — any department, web, app or the 181 helpline',
+    hi: 'पूरा राजस्थान — कोई भी विभाग, वेब, ऐप या 181 हेल्पलाइन',
+  },
+  'portal.covers.MP-STATE': {
+    en: 'All of Madhya Pradesh — any department, via the CM helpline system',
+    hi: 'पूरा मध्य प्रदेश — कोई भी विभाग, सीएम हेल्पलाइन प्रणाली से',
+  },
+  'portal.covers.GJ-STATE': {
+    en: 'All of Gujarat — SWAGAT, escalating to the Chief Minister',
+    hi: 'पूरा गुजरात — स्वागत, मुख्यमंत्री तक पहुँचने वाली प्रणाली',
+  },
+  'portal.covers.KL-STATE': {
+    en: "All of Kerala — the Chief Minister's public grievance cell",
+    hi: 'पूरा केरल — मुख्यमंत्री की जन शिकायत सेल',
+  },
+  'portal.covers.OD-STATE': {
+    en: 'All of Odisha — the state public grievance redressal portal',
+    hi: 'पूरा ओडिशा — राज्य की जन शिकायत निवारण प्रणाली',
+  },
+  'portal.covers.HR-STATE': {
+    en: 'All of Haryana — urban local body complaints across the state',
+    hi: 'पूरा हरियाणा — पूरे राज्य में शहरी निकायों की शिकायतें',
+  },
+
+  'portals.statewide': { en: '{state} · statewide', hi: '{state} · पूरे राज्य में' },
+  'portals.filterState': { en: 'Statewide portals', hi: 'राज्य-स्तरीय पोर्टल' },
+  'portals.coverageNote': {
+    en: 'Where no local body is listed, a report goes to that state\u2019s grievance system, and to the national portal if the state has none. Nowhere in India is left without a destination.',
+    hi: 'जहाँ कोई स्थानीय निकाय सूचीबद्ध नहीं है, वहाँ शिकायत उस राज्य की शिकायत प्रणाली में जाती है, और राज्य में वह न हो तो राष्ट्रीय पोर्टल पर। भारत में कोई भी जगह बिना ठिकाने के नहीं है।',
+  },
+
   // ------------------------------------------------------------------ common
   'common.loading': { en: 'Loading…', hi: 'लोड हो रहा है…' },
   'common.close': { en: 'Close', hi: 'बंद करें' },

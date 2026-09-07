@@ -28,6 +28,7 @@ import { handlesCategory } from '../../core/portal/jurisdiction';
     <div class="page">
       <h1>{{ t('portals.title') }}</h1>
       <p class="muted lead">{{ t('portals.lead') }}</p>
+      <p class="muted lead coverage">{{ t('portals.coverageNote') }}</p>
 
       <div class="filters">
         <div class="filter">
@@ -85,7 +86,7 @@ import { handlesCategory } from '../../core/portal/jurisdiction';
                   <p class="code">{{ portal.jurisdiction }}</p>
                   <h2>{{ portal.name }}</h2>
                 </div>
-                <span class="serves">{{ portal.city ?? t('portals.national') }}</span>
+                <span class="serves">{{ serves(portal) }}</span>
               </header>
 
               <p class="covers">{{ covers(portal.jurisdiction) }}</p>
@@ -134,6 +135,13 @@ import { handlesCategory } from '../../core/portal/jurisdiction';
     .lead {
       max-width: 68ch;
       margin-top: -6px;
+      margin-bottom: 14px;
+    }
+
+    .coverage {
+      font-size: 0.88rem;
+      padding-left: 12px;
+      border-left: 2px solid var(--accent);
       margin-bottom: 24px;
     }
 
@@ -340,6 +348,13 @@ export class PortalDirectoryPage {
 
   protected covers(jurisdiction: Jurisdiction): string {
     return this.i18n.covers(jurisdiction);
+  }
+
+  /** Who a body answers for: a city, a whole state, or the country. */
+  protected serves(portal: Portal): string {
+    if (portal.city) return portal.city;
+    if (portal.state) return this.t('portals.statewide', { state: portal.state });
+    return this.t('portals.national');
   }
 
   /** Strips a published number down to something `tel:` will dial. */

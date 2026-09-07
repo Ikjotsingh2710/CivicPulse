@@ -25,23 +25,41 @@ import type { GrievanceTicket } from '../models';
 
 /** Jurisdiction codes, matching `portal_directory.jurisdiction`. */
 export type Jurisdiction =
+  // Delhi
   | 'MCD'
   | 'NDMC'
   | 'PWD'
   | 'DJB'
   | 'CANTT'
+  // City corporations elsewhere
   | 'BMC'
   | 'BBMP'
   | 'GCC'
   | 'PMC'
+  | 'GHMC'
+  | 'KMC'
+  | 'AMC'
+  // State grievance portals, used where no city body is listed
+  | 'MH-STATE'
+  | 'UP-STATE'
+  | 'BR-STATE'
+  | 'RJ-STATE'
+  | 'MP-STATE'
+  | 'GJ-STATE'
+  | 'KL-STATE'
+  | 'OD-STATE'
+  | 'HR-STATE'
+  // National catch-all
   | 'CPGRAMS';
 
 /** One row of `portal_directory`. */
 export interface Portal {
   jurisdiction: Jurisdiction;
   name: string;
-  /** Canonical city served, or null for the national fallback. */
+  /** Canonical city served. Null on state portals and the national fallback. */
   city: string | null;
+  /** State served, on state grievance portals. Null on city bodies. */
+  state: string | null;
   web_url: string;
   app_url: string | null;
   helpline: string | null;

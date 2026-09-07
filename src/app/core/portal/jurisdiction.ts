@@ -96,6 +96,9 @@ const CITY_BODIES: Readonly<Record<string, Jurisdiction>> = {
   Bengaluru: 'BBMP',
   Chennai: 'GCC',
   Pune: 'PMC',
+  Hyderabad: 'GHMC',
+  Kolkata: 'KMC',
+  Ahmedabad: 'AMC',
 };
 
 /**
@@ -117,6 +120,9 @@ const CITY_EXTENTS: readonly { city: string; box: Omit<ZoneBox, 'jurisdiction' |
   { city: 'Bengaluru', box: { south: 12.83, north: 13.14, west: 77.44, east: 77.78 } },
   { city: 'Chennai', box: { south: 12.83, north: 13.24, west: 80.12, east: 80.34 } },
   { city: 'Pune', box: { south: 18.4, north: 18.65, west: 73.72, east: 73.99 } },
+  { city: 'Hyderabad', box: { south: 17.24, north: 17.6, west: 78.24, east: 78.66 } },
+  { city: 'Kolkata', box: { south: 22.44, north: 22.72, west: 88.23, east: 88.46 } },
+  { city: 'Ahmedabad', box: { south: 22.94, north: 23.15, west: 72.44, east: 72.73 } },
 ];
 
 /**
@@ -254,20 +260,6 @@ export function routeComplaint(input: RoutingInput): RoutingDecision {
   };
 }
 
-/** Every jurisdiction, in the order the directory lists them. */
-export const ALL_JURISDICTIONS: readonly Jurisdiction[] = [
-  'MCD',
-  'NDMC',
-  'PWD',
-  'DJB',
-  'CANTT',
-  'BMC',
-  'BBMP',
-  'GCC',
-  'PMC',
-  'CPGRAMS',
-];
-
 /**
  * What each body will actually act on.
  *
@@ -286,6 +278,20 @@ const HANDLES: Readonly<Record<Jurisdiction, readonly string[] | 'all'>> = {
   BBMP: 'all',
   GCC: 'all',
   PMC: 'all',
+  GHMC: 'all',
+  KMC: 'all',
+  AMC: 'all',
+  // State grievance systems take any complaint against any department, which
+  // is exactly why they are the right fallback where no city body is listed.
+  'MH-STATE': 'all',
+  'UP-STATE': 'all',
+  'BR-STATE': 'all',
+  'RJ-STATE': 'all',
+  'MP-STATE': 'all',
+  'GJ-STATE': 'all',
+  'KL-STATE': 'all',
+  'OD-STATE': 'all',
+  'HR-STATE': 'all',
   CPGRAMS: 'all',
 };
 
