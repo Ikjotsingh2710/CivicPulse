@@ -19,6 +19,7 @@ import {
   CATEGORY_OPTIONS,
   DESCRIPTION_LIMIT,
   DESCRIPTION_TEMPLATES,
+  DESCRIPTION_TEMPLATES_HI,
   type DuplicateMatch,
   type GrievanceTicket,
   type TicketCategory,
@@ -52,23 +53,23 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
         <!-- Segmented scope toggle -->
         <div class="segment" role="tablist" [attr.aria-label]="t('home.segmentLabel')">
           <button type="button" role="tab" class="seg active" aria-selected="true">
-            <span aria-hidden="true">◈</span> Report an issue
+            <span aria-hidden="true">◈</span> {{ t('home.reportAnIssue') }}
           </button>
           <a class="seg" role="tab" routerLink="/profile" aria-selected="false">
-            <span aria-hidden="true">◷</span> Track resolution
+            <span aria-hidden="true">◷</span> {{ t('home.trackResolution') }}
           </a>
         </div>
 
         <h1>
           {{ t('home.fixYourCampus') }}<br />
-          &amp; city issues
+          {{ t('home.andCityIssues') }}
         </h1>
         <p class="sub">{{ t('home.heroSub') }}</p>
 
         <!-- One capsule: campus, issue type, live geotag, then the action. -->
         <div class="capsule">
           <div class="cell campus popover-host">
-            <label for="campus">City / Campus</label>
+            <label for="campus">{{ t('home.cityCampus') }}</label>
             <!-- Displays the selection; searching happens in the panel below,
                  so choosing something does not wipe out what you typed. -->
             <input
@@ -134,12 +135,12 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
                     class="search-input"
                     autocomplete="off"
                     [attr.aria-label]="
-                      placeKind() === 'city' ? 'Search cities' : 'Search campuses'
+                      placeKind() === 'city' ? t('home.searchCities') : t('home.searchCampuses')
                     "
                     [placeholder]="
                       placeKind() === 'city'
-                        ? 'Search city or state…'
-                        : 'Search institution, city or pincode…'
+                        ? t('home.searchCityPlaceholder')
+                        : t('home.searchCampusPlaceholder')
                     "
                     [ngModel]="query()"
                     (ngModelChange)="query.set($event)"
@@ -158,7 +159,7 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
 
                 <p class="result-count muted">
                   {{ matches().length }}
-                  {{ placeKind() === 'city' ? 'cities' : 'campuses' }}
+                  {{ placeKind() === 'city' ? t('home.citiesCount') : t('home.campusesCount') }}
                 </p>
 
                 <div class="place-list" role="listbox">
@@ -211,7 +212,7 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
                     [attr.aria-selected]="category() === option.value"
                     (click)="chooseCategoryAndCapture(option.value)"
                   >
-                    {{ option.label }}
+                    {{ label('chip', option.value) }}
                   </button>
                 }
               </div>
@@ -263,11 +264,11 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
         @if (photoUrl(); as preview) {
           <div class="draft">
             <div class="draft-top">
-              <img cpZoom class="draft-shot" [src]="preview" alt="Captured issue photo" />
+              <img cpZoom class="draft-shot" [src]="preview" [alt]="t('alt.capturedPhoto')" />
               <div class="draft-body">
                 <p class="draft-label">{{ t('home.readyToFile') }}</p>
                 <p class="draft-meta">
-                  {{ categoryLabel() }} · {{ campus()?.name ?? 'No city or campus selected' }}
+                  {{ categoryLabel() }} · {{ campus()?.name ?? t('home.noPlaceSelected') }}
                 </p>
               </div>
             </div>
@@ -284,7 +285,7 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
                     [attr.aria-pressed]="category() === option.value"
                     (click)="chooseCategory(option.value)"
                   >
-                    {{ option.label }}
+                    {{ label('chip', option.value) }}
                   </button>
                 }
               </div>
@@ -1307,9 +1308,13 @@ export class HomePage {
 
   protected readonly matches = computed(() => searchPlaces(this.placeKind(), this.query()));
 
+  /** Hindi openers when the app is in Hindi: the text lands in the complaint. */
   protected readonly templates = computed(() => {
     const value = this.category();
-    return value ? DESCRIPTION_TEMPLATES[value] : [];
+    if (!value) return [];
+    return this.i18n.lang() === 'hi'
+      ? DESCRIPTION_TEMPLATES_HI[value]
+      : DESCRIPTION_TEMPLATES[value];
   });
 
   protected readonly remaining = computed(() => DESCRIPTION_LIMIT - this.description().length);
@@ -1331,10 +1336,11 @@ export class HomePage {
 
   protected readonly canFile = computed(() => this.photoUrl() !== null && this.blocker() === null);
 
+  /** Reads the language signal, so the capsule relabels itself on a switch. */
   protected readonly categoryLabel = computed(() => {
     const value = this.category();
-    if (!value) return 'Select issue';
-    return CATEGORY_OPTIONS.find((option) => option.value === value)?.label ?? 'Select issue';
+    if (!value) return this.i18n.t('home.selectIssue');
+    return this.i18n.label('chip', value);
   });
 
   constructor() {
@@ -1429,7 +1435,11 @@ export class HomePage {
   }
 
   private isTemplate(category: TicketCategory, text: string): boolean {
-    return DESCRIPTION_TEMPLATES[category].includes(text);
+    // Either language counts: the citizen may have switched after tapping one.
+    return (
+      DESCRIPTION_TEMPLATES[category].includes(text) ||
+      DESCRIPTION_TEMPLATES_HI[category].includes(text)
+    );
   }
 
   /**

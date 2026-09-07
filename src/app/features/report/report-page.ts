@@ -118,7 +118,7 @@ import { PortalHandoff } from '../../shared/portal-handoff';
               {{ previewUrl() ? t('report.retakePhoto') : t('report.snapPhoto') }}
             </button>
             @if (previewUrl(); as preview) {
-              <img cpZoom class="preview" [src]="preview" alt="Captured report photo" />
+              <img cpZoom class="preview" [src]="preview" [alt]="t('alt.capturedPhoto')" />
             }
           </div>
 

@@ -49,7 +49,7 @@ export class I18nService {
    * display is localised. An unmapped value falls through unchanged, which is
    * what should happen when a new category is added before its translation is.
    */
-  label(kind: 'status' | 'category' | 'urgency', value: string): string {
+  label(kind: 'status' | 'category' | 'urgency' | 'chip', value: string): string {
     const key = `${kind}.${value}` as StringKey;
     return key in STRINGS ? this.t(key) : value;
   }

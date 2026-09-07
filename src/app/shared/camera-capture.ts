@@ -99,7 +99,7 @@ type Stage =
 
           @case ('review') {
             <h2>{{ t('camera.usePhotoQ') }}</h2>
-            <img class="viewfinder" [src]="previewUrl()" alt="Captured photo" />
+            <img class="viewfinder" [src]="previewUrl()" [alt]="t('alt.capturedPhoto')" />
 
             <!-- Checked on this device before anything is uploaded. A warning,
                  not a block: a broken-streetlight report is a photo of darkness,
@@ -125,7 +125,7 @@ type Stage =
           @case ('location-consent') {
             <p class="step">{{ t('camera.step2') }}</p>
             <h2>{{ t('camera.pinSpot') }}</h2>
-            <img class="thumb" [src]="previewUrl()" alt="Captured photo" />
+            <img class="thumb" [src]="previewUrl()" [alt]="t('alt.capturedPhoto')" />
             <p class="muted">{{ t('camera.locationWhy', { metres: required }) }}</p>
             <div class="actions">
               <button class="btn-ghost" type="button" (click)="close()">

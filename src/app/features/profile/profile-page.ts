@@ -88,12 +88,12 @@ import { TICKET_PIPELINE, type GrievanceTicket, type TicketStatus } from '../../
 
               <div class="photos">
                 <figure>
-                  <img cpZoom [cpPhoto]="ticket.image_url" [alt]="'Reported ' + ticket.category" />
+                  <img cpZoom [cpPhoto]="ticket.image_url" [alt]="t('alt.reportedIssue', { category: label('category', ticket.category) })" />
                   <figcaption class="muted">{{ t('myreports.before') }}</figcaption>
                 </figure>
                 @if (ticket.resolution_image_url) {
                   <figure>
-                    <img cpZoom [cpPhoto]="ticket.resolution_image_url" alt="Resolution proof" />
+                    <img cpZoom [cpPhoto]="ticket.resolution_image_url" [alt]="t('alt.resolutionProof')" />
                     <figcaption class="muted">{{ t('myreports.after') }}</figcaption>
                   </figure>
                 }

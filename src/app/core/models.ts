@@ -97,6 +97,42 @@ export const DESCRIPTION_TEMPLATES: Record<TicketCategory, readonly string[]> = 
   ],
 };
 
+/**
+ * The same openers in Hindi.
+ *
+ * These are not UI labels — tapping one writes it into `description`, which is
+ * what the ward desk reads and what gets pasted into a government portal. So a
+ * citizen filing in Hindi files a complaint that is genuinely in their words,
+ * rather than a Hindi interface that submits English on their behalf.
+ */
+export const DESCRIPTION_TEMPLATES_HI: Record<TicketCategory, readonly string[]> = {
+  Potholes: [
+    'सड़क के बीच गहरा गड्ढा — गाड़ियाँ बचकर निकल रही हैं।',
+    'चौराहे के पास कई गड्ढे हैं; बारिश के बाद उनमें पानी भर जाता है।',
+    'पिछले हफ़्ते से गड्ढा और चौड़ा हो गया है, दोपहिया वालों के लिए ख़तरनाक है।',
+  ],
+  'Broken Streetlight': [
+    'कई रातों से स्ट्रीटलाइट बंद है, पूरा हिस्सा अंधेरे में रहता है।',
+    'लाइट रात भर टिमटिमाती है और बार-बार बंद हो जाती है।',
+    'खंभा टूटा हुआ है और ऊपर फ़िटिंग लटक रही है।',
+  ],
+  Waste: [
+    'कई दिनों से कूड़ा नहीं उठा, कूड़ेदान भर कर बह रहा है।',
+    'कूड़ेदान के बाहर कचरा फेंका गया है — तेज़ बदबू और मक्खियाँ हैं।',
+    'फुटपाथ पर निर्माण का मलबा पड़ा है, रास्ता बंद है।',
+  ],
+  'Water Leakage': [
+    'पाइपलाइन लगातार लीक कर रही है और पानी बर्बाद हो रहा है।',
+    'लाइन फटने से सड़क पर पानी भर गया है।',
+    'वॉल्व के पास रिसाव से आसपास फिसलन हो गई है।',
+  ],
+  Other: [
+    'फुटपाथ की टूटी स्लैब, जिससे लोग ठोकर खा रहे हैं।',
+    'सार्वजनिक जगह की टूटी चीज़, जिसकी मरम्मत या हटाया जाना ज़रूरी है।',
+    'सार्वजनिक रास्ते पर रुकावट, जिससे आना-जाना बंद है।',
+  ],
+};
+
 export interface GrievanceTicket {
   id: string;
   ticket_number: string;

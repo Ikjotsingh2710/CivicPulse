@@ -1,4 +1,5 @@
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
+import { I18nService } from '../core/i18n.service';
 import { FormsModule } from '@angular/forms';
 
 import {
@@ -35,23 +36,23 @@ const SENTIMENTS: readonly { value: Sentiment; label: string; icon: string }[] =
       >
         Feedback
       </button>
-      <p class="tagline">Tell us what would make this better.</p>
+      <p class="tagline">{{ t('feedback.tagline') }}</p>
     </div>
 
     @if (open()) {
       <div class="scrim" (click)="onScrimClick($event)">
         <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="fb-title">
           @if (sent()) {
-            <h2 id="fb-title">Thank you</h2>
+            <h2 id="fb-title">{{ t('feedback.thankYou') }}</h2>
             <p class="muted">
               That goes straight to the people building CivicPulse. If you left your number with
               us, we may follow up.
             </p>
             <div class="actions">
-              <button class="btn-slate" type="button" (click)="close()">Close</button>
+              <button class="btn-slate" type="button" (click)="close()">{{ t('common.close') }}</button>
             </div>
           } @else {
-            <h2 id="fb-title">How is CivicPulse working for you?</h2>
+            <h2 id="fb-title">{{ t('feedback.howWorking') }}</h2>
             <p class="muted lead">
               Tell us what felt slow, confusing or broken — or what you'd want next.
             </p>
@@ -60,7 +61,7 @@ const SENTIMENTS: readonly { value: Sentiment; label: string; icon: string }[] =
               <p class="alert alert-error" role="alert">{{ message }}</p>
             }
 
-            <div class="moods" role="radiogroup" aria-label="Overall experience">
+            <div class="moods" role="radiogroup" [attr.aria-label]="t('feedback.overall')">
               @for (mood of sentiments; track mood.value) {
                 <button
                   type="button"
@@ -77,13 +78,13 @@ const SENTIMENTS: readonly { value: Sentiment; label: string; icon: string }[] =
             </div>
 
             <div class="field">
-              <label for="fb-message">Your thoughts</label>
+              <label for="fb-message">{{ t('feedback.yourThoughts') }}</label>
               <textarea
                 id="fb-message"
                 name="message"
                 rows="5"
                 [maxlength]="limit"
-                placeholder="What would you change first?"
+                [placeholder]="t('feedback.placeholder')"
                 [ngModel]="message()"
                 (ngModelChange)="message.set($event)"
               ></textarea>
@@ -93,7 +94,7 @@ const SENTIMENTS: readonly { value: Sentiment; label: string; icon: string }[] =
             </div>
 
             <div class="actions">
-              <button class="btn-ghost" type="button" (click)="close()">Cancel</button>
+              <button class="btn-ghost" type="button" (click)="close()">{{ t('feedback.cancel') }}</button>
               <button
                 class="btn-slate"
                 type="button"
@@ -276,6 +277,10 @@ const SENTIMENTS: readonly { value: Sentiment; label: string; icon: string }[] =
   `,
 })
 export class FeedbackLauncher {
+  protected readonly i18n = inject(I18nService);
+  /** Bound so templates read `t('key')`; repaints when the language changes. */
+  protected readonly t = this.i18n.t.bind(this.i18n);
+
   private readonly service = inject(FeedbackService);
 
   protected readonly sentiments = SENTIMENTS;

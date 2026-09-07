@@ -388,6 +388,60 @@ export const STRINGS = {
     hi: 'न OTP, न ईमेल — आपका फ़ोन नंबर ही आपकी पहचान है, और वह इस प्रोजेक्ट से बाहर नहीं जाता।',
   },
 
+  'home.reportAnIssue': { en: 'Report an issue', hi: 'शिकायत दर्ज करें' },
+  'home.trackResolution': { en: 'Track resolution', hi: 'समाधान ट्रैक करें' },
+  'home.andCityIssues': { en: '& city issues', hi: 'और शहर की समस्याएँ' },
+  'home.cityCampus': { en: 'City / Campus', hi: 'शहर / कैंपस' },
+  'home.searchCities': { en: 'Search cities', hi: 'शहर खोजें' },
+  'home.searchCampuses': { en: 'Search campuses', hi: 'कैंपस खोजें' },
+  'home.searchCityPlaceholder': {
+    en: 'Search city or state…',
+    hi: 'शहर या राज्य खोजें…',
+  },
+  'home.searchCampusPlaceholder': {
+    en: 'Search institution, city or pincode…',
+    hi: 'संस्थान, शहर या पिनकोड खोजें…',
+  },
+  'home.citiesCount': { en: 'cities', hi: 'शहर' },
+  'home.campusesCount': { en: 'campuses', hi: 'कैंपस' },
+  'home.selectIssue': { en: 'Select issue', hi: 'समस्या चुनें' },
+  'home.noPlaceSelected': {
+    en: 'No city or campus selected',
+    hi: 'कोई शहर या कैंपस नहीं चुना',
+  },
+
+  // Short chip labels. Separate from `category.*` because a chip has room for
+  // one word and the status card has room for the full name.
+  'chip.Potholes': { en: 'Pothole', hi: 'गड्ढा' },
+  'chip.Broken Streetlight': { en: 'Streetlight', hi: 'स्ट्रीटलाइट' },
+  'chip.Waste': { en: 'Garbage', hi: 'कूड़ा' },
+  'chip.Water Leakage': { en: 'Water Leak', hi: 'पानी रिसाव' },
+  'chip.Other': { en: 'Others', hi: 'अन्य' },
+
+  // Alt text. Invisible until someone uses a screen reader, at which point it
+  // is the only text they get — so it is translated like everything else.
+  'alt.capturedPhoto': { en: 'Captured photo', hi: 'ली गई फ़ोटो' },
+  'alt.reportedIssue': { en: 'Reported {category}', hi: 'दर्ज की गई {category}' },
+  'alt.resolutionProof': { en: 'Resolution proof', hi: 'समाधान का प्रमाण' },
+
+  // ----------------------------------------------------------- feedback box
+  'feedback.tagline': {
+    en: 'Tell us what would make this better.',
+    hi: 'बताइए, इसे बेहतर कैसे बनाया जाए।',
+  },
+  'feedback.thankYou': { en: 'Thank you', hi: 'धन्यवाद' },
+  'feedback.howWorking': {
+    en: 'How is CivicPulse working for you?',
+    hi: 'CivicPulse आपके लिए कैसा काम कर रहा है?',
+  },
+  'feedback.overall': { en: 'Overall experience', hi: 'कुल अनुभव' },
+  'feedback.yourThoughts': { en: 'Your thoughts', hi: 'आपकी राय' },
+  'feedback.placeholder': {
+    en: 'What would you change first?',
+    hi: 'सबसे पहले क्या बदलना चाहेंगे?',
+  },
+  'feedback.cancel': { en: 'Cancel', hi: 'रद्द करें' },
+
   // ------------------------------------------------------------------ common
   'common.loading': { en: 'Loading…', hi: 'लोड हो रहा है…' },
   'common.close': { en: 'Close', hi: 'बंद करें' },
