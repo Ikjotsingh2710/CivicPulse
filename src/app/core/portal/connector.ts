@@ -45,6 +45,8 @@ export interface Portal {
   web_url: string;
   app_url: string | null;
   helpline: string | null;
+  /** Digits without a country code, or null where the body publishes none. */
+  whatsapp: string | null;
   connector_type: 'assisted' | 'api';
   active: boolean;
   sort: number;

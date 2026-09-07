@@ -73,6 +73,30 @@ import { ALL_JURISDICTIONS } from '../core/portal/jurisdiction';
               We copy the complaint, save your photo, and open {{ body.name }}. You paste it and
               verify your own OTP there — CivicPulse never submits on your behalf.
             </p>
+
+            <!-- Shown before the handoff, not only after it. A portal is the
+                 wrong channel for a burst main at midnight, and someone on a
+                 weak connection may not get one to load at all. -->
+            @if (body.helpline || body.whatsapp) {
+              <div class="contacts">
+                <span class="muted label">Or reach them directly</span>
+                @if (body.helpline) {
+                  <a class="contact" [href]="'tel:' + dial(body.helpline)">
+                    <span aria-hidden="true">📞</span> {{ body.helpline }}
+                  </a>
+                }
+                @if (body.whatsapp) {
+                  <a
+                    class="contact"
+                    [href]="'https://wa.me/91' + body.whatsapp"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    <span aria-hidden="true">💬</span> WhatsApp
+                  </a>
+                }
+              </div>
+            }
           }
 
           @case ('handed-off') {
@@ -138,23 +162,61 @@ import { ALL_JURISDICTIONS } from '../core/portal/jurisdiction';
                 Reopen {{ body.jurisdiction }} ↗
               </a>
             </div>
+
+            @if (body.helpline || body.whatsapp) {
+              <div class="contacts">
+                <span class="muted label">Stuck on their form?</span>
+                @if (body.helpline) {
+                  <a class="contact" [href]="'tel:' + dial(body.helpline)">
+                    <span aria-hidden="true">📞</span> {{ body.helpline }}
+                  </a>
+                }
+                @if (body.whatsapp) {
+                  <a
+                    class="contact"
+                    [href]="'https://wa.me/91' + body.whatsapp"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    <span aria-hidden="true">💬</span> WhatsApp
+                  </a>
+                }
+              </div>
+            }
           }
 
           @case ('tracked') {
             <p class="eyebrow">Filed with the authority</p>
             <h3>{{ body.name }} · {{ ticket().portal_reference_id }}</h3>
             <p class="muted why">
-              Tracked alongside your CivicPulse ticket. If they go quiet, the helpline
-              @if (body.helpline) {
-                is <b>{{ body.helpline }}</b> and the portal
-              }
-              is one tap away.
+              Tracked alongside your CivicPulse ticket. If they go quiet, chase it below.
             </p>
             <div class="actions">
               <a class="btn-ghost link-btn" [href]="body.web_url" target="_blank" rel="noopener">
                 Check status on {{ body.jurisdiction }} ↗
               </a>
             </div>
+
+            @if (body.helpline || body.whatsapp) {
+              <div class="contacts">
+                <span class="muted label">Chase it</span>
+                @if (body.helpline) {
+                  <a class="contact" [href]="'tel:' + dial(body.helpline)">
+                    <span aria-hidden="true">📞</span> {{ body.helpline }}
+                  </a>
+                }
+                @if (body.whatsapp) {
+                  <a
+                    class="contact"
+                    [href]="'https://wa.me/91' + body.whatsapp"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    <span aria-hidden="true">💬</span> WhatsApp
+                  </a>
+                }
+              </div>
+            }
           }
         }
 
@@ -254,6 +316,42 @@ import { ALL_JURISDICTIONS } from '../core/portal/jurisdiction';
       margin-top: 10px;
       font-size: 0.8rem;
       max-width: 58ch;
+    }
+
+    .contacts {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 14px;
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .contacts .label {
+      font-size: 0.8rem;
+    }
+
+    /* Sized as a tap target, not a text link: on a phone this is someone
+       reaching for a call while standing over the problem. */
+    .contact {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      font-size: 0.86rem;
+      font-weight: 600;
+      text-decoration: none;
+      color: var(--ink-strong);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .contact:hover,
+    .contact:focus-visible {
+      border-color: var(--accent);
+      color: var(--accent-strong);
     }
 
     .nudge {
@@ -373,6 +471,16 @@ export class PortalHandoff {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  /**
+   * Strips a published number down to something `tel:` will dial.
+   *
+   * Helplines are published in whatever shape reads well — `1800-103-0222`,
+   * `011-25693837`, the short code `1916`. A phone dialer wants the digits.
+   */
+  protected dial(helpline: string): string {
+    return helpline.replace(/[^0-9+]/g, '');
   }
 
   /** Manual retry for when the clipboard API was refused the first time. */
