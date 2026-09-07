@@ -6,12 +6,13 @@ import { AuthService } from '../../core/auth.service';
 import { TicketsService } from '../../core/tickets.service';
 import { PhotoZoom } from '../../shared/photo-zoom';
 import { PhotoSrc } from '../../shared/photo-src';
+import { PortalHandoff } from '../../shared/portal-handoff';
 import { TICKET_PIPELINE, type GrievanceTicket, type TicketStatus } from '../../core/models';
 
 @Component({
   selector: 'cp-profile-page',
   standalone: true,
-  imports: [RouterLink, DatePipe, PhotoZoom, PhotoSrc],
+  imports: [RouterLink, DatePipe, PhotoZoom, PhotoSrc, PortalHandoff],
   template: `
     <div class="page">
       <header class="head">
@@ -95,6 +96,11 @@ import { TICKET_PIPELINE, type GrievanceTicket, type TicketStatus } from '../../
                   </figure>
                 }
               </div>
+
+              <!-- Both tickets on one card: CivicPulse's, and the government
+                   one. A citizen should not have to remember which portal they
+                   used last Tuesday. -->
+              <cp-portal-handoff [ticket]="ticket" (tracked)="reload()" />
             </article>
           }
         </div>
@@ -319,6 +325,11 @@ export class ProfilePage {
     if (status === 'Rejected') return 'pill-high';
     if (status === 'In Progress') return 'pill-progress';
     return 'pill-submitted';
+  }
+
+  /** Refetches after a handoff is recorded, so the card shows its new state. */
+  protected reload(): void {
+    void this.load();
   }
 
   private async load(): Promise<void> {

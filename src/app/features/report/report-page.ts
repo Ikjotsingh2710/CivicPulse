@@ -18,11 +18,20 @@ import {
   type TicketUrgency,
 } from '../../core/models';
 import { CameraCapture, type CapturedLocation } from '../../shared/camera-capture';
+import { PortalHandoff } from '../../shared/portal-handoff';
 
 @Component({
   selector: 'cp-report-page',
   standalone: true,
-  imports: [FormsModule, RouterLink, DecimalPipe, CameraCapture, PhotoZoom, DuplicatePrompt],
+  imports: [
+    FormsModule,
+    RouterLink,
+    DecimalPipe,
+    CameraCapture,
+    PhotoZoom,
+    DuplicatePrompt,
+    PortalHandoff,
+  ],
   template: `
     <div class="page">
       <h1>File a report</h1>
@@ -44,6 +53,11 @@ import { CameraCapture, type CapturedLocation } from '../../shared/camera-captur
             <button class="btn-ghost" type="button" (click)="fileAnother()">File another</button>
           </div>
         </div>
+
+        <!-- Offered here rather than before filing: the CivicPulse ticket
+             exists either way, so a citizen who ignores this has still
+             reported the problem. -->
+        <cp-portal-handoff [ticket]="ticket" (tracked)="onTracked($event)" />
       } @else {
         <form class="card" (ngSubmit)="submit()">
           @if (error(); as message) {
@@ -424,6 +438,18 @@ export class ReportPage {
     });
 
     this.filed.set(ticket);
+  }
+
+  /** The citizen came back with the portal's number; reflect it immediately. */
+  protected onTracked(reference: string): void {
+    const ticket = this.filed();
+    if (!ticket) return;
+
+    this.filed.set({
+      ...ticket,
+      portal_reference_id: reference,
+      portal_status: 'submitted',
+    });
   }
 
   protected fileAnother(): void {

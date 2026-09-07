@@ -69,6 +69,30 @@ export class PhotoService {
     return data.signedUrl;
   }
 
+  /**
+   * Resolves a reference to a link that *saves* the file rather than showing it.
+   *
+   * The `download` attribute on an anchor is ignored across origins, so a
+   * cross-origin link opens the image in a tab instead of saving it. Signing
+   * with `download` sets a content-disposition of attachment on the response,
+   * which the browser honours regardless of origin — the difference between a
+   * citizen having the photo in their gallery, ready to attach to a government
+   * form, and having it in a tab they must long-press.
+   *
+   * Not cached: these are one-shot, and a stale one is worse than a fresh mint.
+   */
+  async resolveDownload(reference: string | null | undefined): Promise<string | null> {
+    if (!reference) return null;
+    if (/^(https?:|blob:|data:)/.test(reference)) return reference;
+
+    const { data, error } = await supabase.storage
+      .from(BUCKET)
+      .createSignedUrl(reference, TTL_SECONDS, { download: true });
+
+    if (error || !data?.signedUrl) return null;
+    return data.signedUrl;
+  }
+
   /** Drops a cached URL, so the next render re-signs it. Used after deletion. */
   forget(reference: string): void {
     this.cache.delete(reference);

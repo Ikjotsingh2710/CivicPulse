@@ -121,7 +121,26 @@ export interface GrievanceTicket {
   resolution_image_url: string | null;
   department_email: string | null;
   last_escalated_at: string | null;
+
+  // ---------------------------------------------------- government handoff
+  /** Which body this was handed to, matching `portal_directory.jurisdiction`. */
+  portal_jurisdiction: string | null;
+  portal_status: PortalStatus;
+  /** Stamped by the database, never by the device, so reminders fire on time. */
+  portal_handed_off_at: string | null;
+  /** The complaint number the portal issued, typed in by the citizen. */
+  portal_reference_id: string | null;
 }
+
+/**
+ * How far a report has got with the government body, as distinct from how far
+ * it has got with CivicPulse's own ward desk. The two run in parallel.
+ *
+ * `awaiting_user_submission` is where an assisted handoff honestly leaves
+ * things: the citizen was taken to the portal with everything ready, and only
+ * they can say whether they finished.
+ */
+export type PortalStatus = 'not_sent' | 'awaiting_user_submission' | 'submitted';
 
 /** Columns the citizen portal supplies; the rest are defaulted by Postgres. */
 export type NewGrievanceTicket = Pick<
