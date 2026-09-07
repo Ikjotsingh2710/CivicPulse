@@ -151,6 +151,26 @@ import {
                   >approximate · no geotag</span
                 >
               }
+
+              <!-- Whether the citizen also took this to the authority. The desk
+                   was previously blind to it, which meant chasing a complaint
+                   MCD had already been given, or assuming one had gone when it
+                   never did. -->
+              @if (ticket.portal_jurisdiction) {
+                <p class="handoff-line">
+                  @switch (ticket.portal_status) {
+                    @case ('submitted') {
+                      <span class="handoff-dot filed" aria-hidden="true"></span>
+                      Filed with {{ ticket.portal_jurisdiction }} ·
+                      <b>{{ ticket.portal_reference_id }}</b>
+                    }
+                    @case ('awaiting_user_submission') {
+                      <span class="handoff-dot waiting" aria-hidden="true"></span>
+                      Sent to {{ ticket.portal_jurisdiction }} — not confirmed by the citizen
+                    }
+                  }
+                </p>
+              }
             </div>
 
             <div class="actions">
@@ -386,6 +406,32 @@ import {
     /* Dimmer than a real pin, so the two never read as the same thing. */
     .map.approx {
       color: var(--warn);
+    }
+
+    .handoff-line {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin: 10px 0 0;
+      font-size: 0.84rem;
+      color: var(--ink-muted);
+    }
+
+    .handoff-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Green means the government has it too. Amber means the citizen was sent
+       and never came back, which is a different problem for the desk. */
+    .handoff-dot.filed {
+      background: var(--green-600);
+    }
+
+    .handoff-dot.waiting {
+      background: var(--warn);
     }
 
     .nogeo {
