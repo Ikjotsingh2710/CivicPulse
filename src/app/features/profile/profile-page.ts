@@ -100,6 +100,14 @@ import { TICKET_PIPELINE, type GrievanceTicket, type TicketStatus } from '../../
                 {{ ticket.updated_at | date: 'd MMM y, h:mm a' }}
               </p>
 
+              <!-- Until now the only way to upvote a report was to try filing
+                   the same problem and be told it was a duplicate. A link lets
+                   one person rally the street that shares the problem. -->
+              <button class="btn-ghost share" type="button" (click)="share(ticket)">
+                <span aria-hidden="true">🔗</span>
+                {{ sharedId() === ticket.id ? t('share.copied') : t('share.share') }}
+              </button>
+
               <div class="photos">
                 <figure>
                   <img cpZoom [cpPhoto]="ticket.image_url" [alt]="t('alt.reportedIssue', { category: label('category', ticket.category) })" />
@@ -196,6 +204,12 @@ import { TICKET_PIPELINE, type GrievanceTicket, type TicketStatus } from '../../
 
     .body {
       margin: 14px 0 0;
+    }
+
+    .share {
+      margin-top: 10px;
+      font-size: 0.86rem;
+      padding: 7px 13px;
     }
 
     .timeline {
@@ -367,6 +381,36 @@ export class ProfilePage {
   protected readonly pending = computed(() =>
     this.tickets().filter((ticket) => ticket.portal_status === 'awaiting_user_submission'),
   );
+
+  /** Which card most recently had its link copied, for the button's label. */
+  protected readonly sharedId = signal<string | null>(null);
+
+  /**
+   * Hands the report's link to whatever the device shares with.
+   *
+   * The native share sheet on a phone is what puts this into a WhatsApp group,
+   * which is where a street actually talks. Clipboard is the desktop fallback.
+   */
+  protected async share(ticket: GrievanceTicket): Promise<void> {
+    const url = `${location.origin}/r/${ticket.ticket_number}`;
+    const text = this.t('share.shareText');
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: ticket.ticket_number, text, url });
+        return;
+      } catch {
+        // Dismissed, or unavailable despite existing. Fall through to copying.
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(`${text} ${url}`);
+      this.sharedId.set(ticket.id);
+    } catch {
+      // Nothing more to offer; the citizen can still open the report itself.
+    }
+  }
 
   /** Refetches after a handoff is recorded, so the card shows its new state. */
   protected reload(): void {

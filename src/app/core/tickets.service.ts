@@ -81,6 +81,25 @@ export class TicketsService {
     return data ?? null;
   }
 
+  /**
+   * Looks a report up by its number, as a stranger would see it.
+   *
+   * Reads `public_tickets` rather than the table, so a shared link shows only
+   * what the view is willing to publish: no phone number, and no photo until
+   * the desk has reviewed it. `getByNumber` above is the owner's view and
+   * would simply return nothing to anyone else.
+   */
+  async getPublicByNumber(ticketNumber: string): Promise<PublicTicket | null> {
+    const { data, error } = await supabase
+      .from('public_tickets')
+      .select('*')
+      .eq('ticket_number', ticketNumber)
+      .maybeSingle<PublicTicket>();
+
+    if (error) throw new Error(describeSupabaseError(error, 'Could not load that report.'));
+    return data ?? null;
+  }
+
   /** Files a new ticket. `ticket_number` is assigned by a Postgres trigger. */
   async create(
     ticket: Omit<NewGrievanceTicket, 'user_phone' | 'user_name'>,

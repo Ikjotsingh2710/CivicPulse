@@ -28,6 +28,15 @@ export const routes: Routes = [
       import('./features/portals/portal-directory-page').then((m) => m.PortalDirectoryPage),
   },
   {
+    // Public: the point of a shared link is that it works for someone who has
+    // never opened this app. It reads `public_tickets`, so RLS decides what a
+    // stranger is allowed to see rather than this route.
+    path: 'r/:number',
+    title: 'A report on CivicPulse',
+    loadComponent: () =>
+      import('./features/share/shared-report-page').then((m) => m.SharedReportPage),
+  },
+  {
     path: 'report',
     title: 'File a report · CivicPulse',
     canActivate: [authGuard],

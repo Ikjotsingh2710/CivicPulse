@@ -536,6 +536,43 @@ export const STRINGS = {
   },
   'updates.menuSub': { en: 'Something changed since you last looked', hi: 'पिछली बार के बाद कुछ बदला है' },
 
+  // ------------------------------------------------------------ shared report
+  'share.affected': {
+    en: '{count} people have reported this problem',
+    hi: '{count} लोगों ने यह समस्या दर्ज की है',
+  },
+  'share.meToo': { en: 'I have this problem too', hi: 'मुझे भी यह समस्या है' },
+  'share.backed': { en: 'Your voice was added', hi: 'आपका समर्थन जुड़ गया' },
+  'share.thanks': {
+    en: 'Added. The ward desk now sees this as affecting more people.',
+    hi: 'जुड़ गया। वार्ड डेस्क अब इसे ज़्यादा लोगों की समस्या के रूप में देखेगा।',
+  },
+  'share.couldNotBack': { en: 'Could not add your voice.', hi: 'आपका समर्थन नहीं जोड़ा जा सका।' },
+  'share.signInToBack': {
+    en: 'Sign in to add your voice',
+    hi: 'समर्थन जोड़ने के लिए साइन इन करें',
+  },
+  'share.photoPending': {
+    en: 'The photo is held back until the ward desk has reviewed this report.',
+    hi: 'वार्ड डेस्क की समीक्षा तक फ़ोटो रोक कर रखी गई है।',
+  },
+  'share.footnote': {
+    en: 'The more people report a problem, the higher it rises in the ward desk queue.',
+    hi: 'जितने ज़्यादा लोग किसी समस्या को दर्ज करते हैं, वह वार्ड डेस्क की सूची में उतनी ऊपर आती है।',
+  },
+  'share.reportYourOwn': { en: 'Report something yourself', hi: 'अपनी शिकायत दर्ज करें' },
+  'share.notFound': { en: 'Report not found', hi: 'शिकायत नहीं मिली' },
+  'share.notFoundSub': {
+    en: 'That link may be wrong, or the report may have been removed.',
+    hi: 'यह लिंक ग़लत हो सकता है, या शिकायत हटा दी गई हो सकती है।',
+  },
+  'share.share': { en: 'Share', hi: 'साझा करें' },
+  'share.copied': { en: 'Link copied', hi: 'लिंक कॉपी हो गया' },
+  'share.shareText': {
+    en: 'I reported this on CivicPulse. If you have the same problem, add your voice:',
+    hi: 'मैंने यह CivicPulse पर दर्ज किया है। अगर आपको भी यही समस्या है, तो अपना समर्थन जोड़ें:',
+  },
+
   // ------------------------------------------------------------------ common
   'common.loading': { en: 'Loading…', hi: 'लोड हो रहा है…' },
   'common.close': { en: 'Close', hi: 'बंद करें' },
