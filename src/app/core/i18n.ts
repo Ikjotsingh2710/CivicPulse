@@ -516,6 +516,15 @@ export const STRINGS = {
     hi: 'भारत में कहीं भी — हर केंद्रीय और राज्य विभाग तक पहुँचता है',
   },
 
+  'myreports.pendingOne': {
+    en: 'You started a complaint with {portal} and have not added its number yet. Find that report below and paste it in — CivicPulse then tracks both together.',
+    hi: 'आपने {portal} में शिकायत शुरू की थी, पर उसका नंबर अभी नहीं जोड़ा। नीचे वह रिपोर्ट ढूँढकर नंबर पेस्ट करें — फिर CivicPulse दोनों को साथ ट्रैक करेगा।',
+  },
+  'myreports.pendingMany': {
+    en: '{count} complaints are waiting for the reference number the portal gave you. Adding it lets CivicPulse track both tickets together.',
+    hi: '{count} शिकायतें उस नंबर का इंतज़ार कर रही हैं जो पोर्टल ने आपको दिया था। नंबर जोड़ने पर CivicPulse दोनों शिकायतें साथ ट्रैक करेगा।',
+  },
+
   // ------------------------------------------------------------------ common
   'common.loading': { en: 'Loading…', hi: 'लोड हो रहा है…' },
   'common.close': { en: 'Close', hi: 'बंद करें' },

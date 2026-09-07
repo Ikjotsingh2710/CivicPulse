@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/auth.service';
@@ -26,6 +26,19 @@ import { TICKET_PIPELINE, type GrievanceTicket, type TicketStatus } from '../../
 
       @if (error(); as message) {
         <p class="alert alert-error" role="alert">{{ message }}</p>
+      }
+
+      <!-- The handoff's weakest link: people leave for the government portal
+           and never come back to record the number, so the ticket sits waiting
+           forever. This is the only place they will see that. -->
+      @if (pending().length > 0) {
+        <p class="alert waiting" role="status">
+          {{
+            pending().length === 1
+              ? t('myreports.pendingOne', { portal: pending()[0].portal_jurisdiction ?? '' })
+              : t('myreports.pendingMany', { count: pending().length })
+          }}
+        </p>
       }
 
       @if (loading()) {
@@ -110,6 +123,13 @@ import { TICKET_PIPELINE, type GrievanceTicket, type TicketStatus } from '../../
     </div>
   `,
   styles: `
+    /* Amber, not red: nothing is broken — there is one paste left to do. */
+    .waiting {
+      background: var(--warn-soft);
+      color: var(--warn);
+      margin-bottom: 20px;
+    }
+
     .head {
       display: flex;
       justify-content: space-between;
@@ -334,6 +354,17 @@ export class ProfilePage {
     if (status === 'In Progress') return 'pill-progress';
     return 'pill-submitted';
   }
+
+  /**
+   * Reports handed to a portal that the citizen never confirmed.
+   *
+   * Not filtered by age: they may have filed it thirty seconds ago and come
+   * straight back, in which case the reminder is timely rather than nagging.
+   * The 24-hour nudge on the card itself is the slower, sterner one.
+   */
+  protected readonly pending = computed(() =>
+    this.tickets().filter((ticket) => ticket.portal_status === 'awaiting_user_submission'),
+  );
 
   /** Refetches after a handoff is recorded, so the card shows its new state. */
   protected reload(): void {
