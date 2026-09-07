@@ -555,3 +555,51 @@ a.dropdown-item {
     right: auto;
   }
 }
+
+
+/* ------------------------------------------------------------------ language
+   A two-button segmented control rather than a dropdown: both options are
+   readable at a glance, and someone who needs Hindi should not have to open
+   an English menu to find it. */
+.lang {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-right: 10px;
+}
+
+.lang-btn {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 6px 10px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.lang-btn + .lang-btn {
+  border-left: 1px solid var(--line-strong);
+}
+
+.lang-btn:hover,
+.lang-btn:focus-visible {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.lang-btn.active {
+  background: var(--accent);
+  color: var(--ink-inverse);
+}
+
+/* Over the dark hero the bar inverts, and the border has to follow or the
+   control disappears into the green. */
+.app-bar.on-dark .lang,
+.app-bar.on-dark .lang-btn + .lang-btn {
+  border-color: color-mix(in srgb, currentColor 35%, transparent);
+}

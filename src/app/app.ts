@@ -7,6 +7,7 @@ import { TicketsService } from './core/tickets.service';
 import { PhotoLightbox } from './shared/photo-lightbox';
 import { ReportToast } from './shared/report-toast';
 import { NotificationsService } from './core/notifications.service';
+import { I18nService } from './core/i18n.service';
 
 type RegionMode = 'city' | 'pincode';
 
@@ -24,6 +25,13 @@ type RegionMode = 'city' | 'pincode';
   templateUrl: './app.html',
 })
 export class App {
+  protected readonly i18n = inject(I18nService);
+  /**
+   * Bound so templates can write `t('key')` rather than `i18n.t('key')`.
+   * It reads the language signal, so every view using it repaints on a switch.
+   */
+  protected readonly t = this.i18n.t.bind(this.i18n);
+
   protected readonly auth = inject(AuthService);
   protected readonly notifications = inject(NotificationsService);
   private readonly tickets = inject(TicketsService);

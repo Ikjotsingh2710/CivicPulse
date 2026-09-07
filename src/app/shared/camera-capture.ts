@@ -1,4 +1,15 @@
-import { Component, ElementRef, OnDestroy, computed, effect, output, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  OnDestroy,
+  computed,
+  effect,
+  inject,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { I18nService } from '../core/i18n.service';
 import {
   EXACT_ACCURACY_M,
   REQUIRED_ACCURACY_M,
@@ -47,44 +58,47 @@ type Stage =
   selector: 'cp-camera-capture',
   standalone: true,
   template: `
-    <div class="scrim" role="dialog" aria-modal="true" aria-label="Capture live photo">
+    <div class="scrim" role="dialog" aria-modal="true" [attr.aria-label]="t('camera.dialogLabel')">
       <div class="sheet">
         @switch (stage()) {
           @case ('camera-consent') {
-            <p class="step">Step 1 of 2</p>
-            <h2>Use your camera</h2>
-            <p class="muted">
-              The photo has to be taken here, at the scene — gallery uploads aren't accepted,
-              because a ward desk can't act on a picture that might be from anywhere.
-            </p>
+            <p class="step">{{ t('camera.step1') }}</p>
+            <h2>{{ t('camera.useCamera') }}</h2>
+            <p class="muted">{{ t('camera.cameraWhy') }}</p>
             <div class="actions">
-              <button class="btn-ghost" type="button" (click)="close()">Cancel</button>
+              <button class="btn-ghost" type="button" (click)="close()">
+                {{ t('camera.cancel') }}
+              </button>
               <button class="btn-slate" type="button" (click)="startCamera()">
-                Allow camera
+                {{ t('camera.allowCamera') }}
               </button>
             </div>
           }
 
           @case ('starting') {
-            <h2>Opening camera…</h2>
-            <p class="muted">Accept your browser's permission prompt to continue.</p>
+            <h2>{{ t('camera.opening') }}</h2>
+            <p class="muted">{{ t('camera.acceptBrowser') }}</p>
           }
 
           @case ('live') {
-            <p class="step">Step 1 of 2</p>
-            <h2>Frame the issue</h2>
+            <p class="step">{{ t('camera.step1') }}</p>
+            <h2>{{ t('camera.frameIssue') }}</h2>
             <video #video class="viewfinder" autoplay playsinline muted></video>
             @if (error(); as message) {
               <p class="alert alert-error">{{ message }}</p>
             }
             <div class="actions">
-              <button class="btn-ghost" type="button" (click)="close()">Cancel</button>
-              <button class="btn-slate" type="button" (click)="shoot()">Capture</button>
+              <button class="btn-ghost" type="button" (click)="close()">
+                {{ t('camera.cancel') }}
+              </button>
+              <button class="btn-slate" type="button" (click)="shoot()">
+                {{ t('camera.capture') }}
+              </button>
             </div>
           }
 
           @case ('review') {
-            <h2>Use this photo?</h2>
+            <h2>{{ t('camera.usePhotoQ') }}</h2>
             <img class="viewfinder" [src]="previewUrl()" alt="Captured photo" />
 
             <!-- Checked on this device before anything is uploaded. A warning,
@@ -99,92 +113,89 @@ type Stage =
             }
 
             <div class="actions">
-              <button class="btn-ghost" type="button" (click)="retake()">Retake</button>
+              <button class="btn-ghost" type="button" (click)="retake()">
+                {{ t('camera.retake') }}
+              </button>
               <button class="btn-slate" type="button" (click)="askLocation()">
-                {{ quality()?.warning ? 'Use it anyway' : 'Use photo' }}
+                {{ quality()?.warning ? t('camera.useAnyway') : t('camera.usePhoto') }}
               </button>
             </div>
           }
 
           @case ('location-consent') {
-            <p class="step">Step 2 of 2</p>
-            <h2>Pin the exact spot</h2>
+            <p class="step">{{ t('camera.step2') }}</p>
+            <h2>{{ t('camera.pinSpot') }}</h2>
             <img class="thumb" [src]="previewUrl()" alt="Captured photo" />
-            <p class="muted">
-              A crew has to walk to this problem, so the report carries the coordinates read from
-              this device rather than the name of the area. We hold out for an exact fix, and file
-              nothing further than {{ required }}m from the spot.
-            </p>
+            <p class="muted">{{ t('camera.locationWhy', { metres: required }) }}</p>
             <div class="actions">
-              <button class="btn-ghost" type="button" (click)="close()">Cancel</button>
+              <button class="btn-ghost" type="button" (click)="close()">
+                {{ t('camera.cancel') }}
+              </button>
               <button class="btn-slate" type="button" (click)="requestLocation()">
-                Allow location
+                {{ t('camera.allowLocation') }}
               </button>
             </div>
           }
 
           @case ('locating') {
-            <h2>Pinpointing…</h2>
+            <h2>{{ t('camera.pinpointing') }}</h2>
             @if (accuracy(); as metres) {
               <!-- Showing the number tightening turns an unexplained wait into
                    visible progress, and tells the citizen when to step outside. -->
               @if (metres <= required) {
                 <!-- Past the bar, but GPS is usually still descending. Say so,
                      otherwise the extra seconds read as the app being stuck. -->
-                <p class="accuracy">Accurate to <b>{{ metres }}m</b> — sharpening the fix</p>
+                <p class="accuracy">{{ t('camera.sharpening', { metres }) }}</p>
               } @else {
-                <p class="accuracy">Accurate to <b>{{ metres }}m</b> — holding out for {{ required }}m</p>
+                <p class="accuracy">{{ t('camera.holdingOut', { metres, required }) }}</p>
               }
               <div class="meter" role="img" [attr.aria-label]="'Accurate to ' + metres + ' metres'">
                 <span [style.width.%]="closeness()"></span>
               </div>
             } @else {
-              <p class="muted">Accept the permission prompt to continue.</p>
+              <p class="muted">{{ t('camera.acceptPrompt') }}</p>
             }
-            <p class="muted hint">
-              GPS needs a clear view of the sky. If this stalls, step outside or near a window.
-            </p>
+            <p class="muted hint">{{ t('camera.skyHint') }}</p>
           }
 
           @case ('location-coarse') {
-            <h2>Close, but not exact</h2>
-            <p class="muted">
-              Your device settled at <b>±{{ accuracy() }}m</b>. That is good enough to file — it
-              puts the report on the right block — but a crew would still have to look around
-              rather than walk straight to it.
-            </p>
-            <p class="muted hint">
-              Stepping outside or away from a building usually gets under {{ exact }}m within a few
-              seconds.
-            </p>
+            <h2>{{ t('camera.closeNotExact') }}</h2>
+            <p class="muted">{{ t('camera.coarseBody', { metres: accuracy() ?? 0 }) }}</p>
+            <p class="muted hint">{{ t('camera.coarseHint', { exact }) }}</p>
             <div class="actions">
-              <button class="btn-ghost" type="button" (click)="finish()">File it anyway</button>
+              <button class="btn-ghost" type="button" (click)="finish()">
+                {{ t('camera.fileAnyway') }}
+              </button>
               <button class="btn-slate" type="button" (click)="requestLocation()">
-                Try for exact
+                {{ t('camera.tryExact') }}
               </button>
             </div>
           }
 
           @case ('location-failed') {
-            <h2>Location not close enough</h2>
+            <h2>{{ t('camera.notCloseEnough') }}</h2>
             <p class="alert alert-error">{{ error() }}</p>
-            <p class="muted">
-              A report has to land within {{ required }}m of the problem, or nobody can be sent to
-              it. Allow location access if you have not, then step outside or near a window and
-              try again.
-            </p>
+            <p class="muted">{{ t('camera.failedBody', { metres: required }) }}</p>
             <div class="actions">
-              <button class="btn-ghost" type="button" (click)="close()">Cancel report</button>
-              <button class="btn-slate" type="button" (click)="requestLocation()">Try again</button>
+              <button class="btn-ghost" type="button" (click)="close()">
+                {{ t('camera.cancelReport') }}
+              </button>
+              <button class="btn-slate" type="button" (click)="requestLocation()">
+                {{ t('camera.tryAgain') }}
+              </button>
             </div>
           }
 
           @case ('error') {
-            <h2>Camera unavailable</h2>
+            <h2>{{ t('camera.unavailable') }}</h2>
             <p class="alert alert-error">{{ error() }}</p>
             <div class="actions">
-              <button class="btn-ghost" type="button" (click)="close()">Close</button>
-              <button class="btn-slate" type="button" (click)="startCamera()">Try again</button>
+              <button class="btn-ghost" type="button" (click)="close()">
+                {{ t('common.close') }}
+              </button>
+              <button class="btn-slate" type="button" (click)="startCamera()">
+                {{ t('camera.tryAgain') }}
+              </button>
             </div>
           }
         }
@@ -302,6 +313,10 @@ type Stage =
   `,
 })
 export class CameraCapture implements OnDestroy {
+  protected readonly i18n = inject(I18nService);
+  /** Bound so templates read `t('key')`; repaints when the language changes. */
+  protected readonly t = this.i18n.t.bind(this.i18n);
+
   readonly captured = output<File>();
   readonly located = output<CapturedLocation>();
   readonly dismissed = output<void>();

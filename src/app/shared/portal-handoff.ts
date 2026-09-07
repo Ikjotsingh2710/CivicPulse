@@ -1,6 +1,7 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import { I18nService } from '../core/i18n.service';
 import { PortalService } from '../core/portal.service';
 import type { GrievanceTicket } from '../core/models';
 import type { HandoffResult, Jurisdiction, Portal, PreparedComplaint } from '../core/portal/connector';
@@ -29,8 +30,8 @@ import { ALL_JURISDICTIONS } from '../core/portal/jurisdiction';
       <div class="handoff card" [class.done]="sent()">
         @switch (stage()) {
           @case ('ready') {
-            <p class="eyebrow">Also send this to the authority</p>
-            <h3>Ready to send to {{ body.name }}</h3>
+            <p class="eyebrow">{{ t('portal.eyebrow') }}</p>
+            <h3>{{ t('portal.readyTo', { name: body.name }) }}</h3>
             <p class="muted why">{{ reason() }}</p>
 
             @if (result()?.status === 'failed') {
@@ -44,16 +45,26 @@ import { ALL_JURISDICTIONS } from '../core/portal/jurisdiction';
                 [disabled]="preparing() || busy()"
                 (click)="send()"
               >
-                {{ preparing() ? 'Getting it ready…' : busy() ? 'Opening…' : 'Send it' }}
+                {{
+                  preparing()
+                    ? t('portal.gettingReady')
+                    : busy()
+                      ? t('portal.opening')
+                      : t('portal.sendIt')
+                }}
               </button>
               <button class="btn-ghost" type="button" (click)="picking.set(!picking())">
-                {{ picking() ? 'Keep ' + body.jurisdiction : 'Wrong department?' }}
+                {{
+                  picking()
+                    ? t('portal.keep', { jurisdiction: body.jurisdiction })
+                    : t('portal.wrongDept')
+                }}
               </button>
             </div>
 
             @if (picking()) {
               <div class="field switcher">
-                <label for="jurisdiction">Send it to</label>
+                <label for="jurisdiction">{{ t('portal.sendTo') }}</label>
                 <select
                   id="jurisdiction"
                   name="jurisdiction"
@@ -70,8 +81,7 @@ import { ALL_JURISDICTIONS } from '../core/portal/jurisdiction';
             }
 
             <p class="muted fineprint">
-              We copy the complaint, save your photo, and open {{ body.name }}. You paste it and
-              verify your own OTP there — CivicPulse never submits on your behalf.
+              {{ t('portal.fineprint', { name: body.name }) }}
             </p>
 
             <!-- Shown before the handoff, not only after it. A portal is the
@@ -79,7 +89,7 @@ import { ALL_JURISDICTIONS } from '../core/portal/jurisdiction';
                  weak connection may not get one to load at all. -->
             @if (body.helpline || body.whatsapp) {
               <div class="contacts">
-                <span class="muted label">Or reach them directly</span>
+                <span class="muted label">{{ t('portal.reachDirectly') }}</span>
                 @if (body.helpline) {
                   <a class="contact" [href]="'tel:' + dial(body.helpline)">
                     <span aria-hidden="true">📞</span> {{ body.helpline }}
@@ -100,25 +110,19 @@ import { ALL_JURISDICTIONS } from '../core/portal/jurisdiction';
           }
 
           @case ('handed-off') {
-            <p class="eyebrow">Waiting on you</p>
-            <h3>{{ body.name }} is open in another tab</h3>
+            <p class="eyebrow">{{ t('portal.waitingOnYou') }}</p>
+            <h3>{{ t('portal.openInTab', { name: body.name }) }}</h3>
 
             <ol class="steps">
               <li [class.missed]="!result()?.copied">
-                {{
-                  result()?.copied
-                    ? 'Complaint copied — paste it into their form.'
-                    : 'Copy the complaint below and paste it into their form.'
-                }}
+                {{ result()?.copied ? t('portal.stepCopied') : t('portal.stepCopyManual') }}
               </li>
               <li [class.missed]="!result()?.photoSaved">
                 {{
-                  result()?.photoSaved
-                    ? 'Photo saved to your device — attach it there.'
-                    : 'Save your photo from the report and attach it there.'
+                  result()?.photoSaved ? t('portal.stepPhotoSaved') : t('portal.stepPhotoManual')
                 }}
               </li>
-              <li>Submit and verify with your own OTP.</li>
+              <li>{{ t('portal.stepSubmit') }}</li>
             </ol>
 
             @if (!result()?.copied && prepared(); as ready) {
@@ -127,12 +131,12 @@ import { ALL_JURISDICTIONS } from '../core/portal/jurisdiction';
                    fallback: selectable, and never lost behind a failed API. -->
               <textarea class="fallback" readonly rows="8">{{ ready.body }}</textarea>
               <button class="btn-ghost" type="button" (click)="copyAgain()">
-                {{ copiedNow() ? 'Copied' : 'Copy the complaint' }}
+                {{ copiedNow() ? t('portal.copied') : t('portal.copyComplaint') }}
               </button>
             }
 
             <div class="field reference">
-              <label for="reference">Their complaint number</label>
+              <label for="reference">{{ t('portal.theirNumber') }}</label>
               <input
                 id="reference"
                 name="reference"
@@ -140,9 +144,7 @@ import { ALL_JURISDICTIONS } from '../core/portal/jurisdiction';
                 [(ngModel)]="reference"
                 [disabled]="busy()"
               />
-              <span class="muted fineprint">
-                Paste it here and CivicPulse tracks both tickets together.
-              </span>
+              <span class="muted fineprint">{{ t('portal.referenceHint') }}</span>
             </div>
 
             @if (error(); as message) {
@@ -156,16 +158,16 @@ import { ALL_JURISDICTIONS } from '../core/portal/jurisdiction';
                 [disabled]="busy() || !reference.trim()"
                 (click)="saveReference()"
               >
-                {{ busy() ? 'Saving…' : 'Save the number' }}
+                {{ busy() ? t('portal.saving') : t('portal.saveNumber') }}
               </button>
               <a class="btn-ghost link-btn" [href]="body.web_url" target="_blank" rel="noopener">
-                Reopen {{ body.jurisdiction }} ↗
+                {{ t('portal.reopen', { jurisdiction: body.jurisdiction }) }}
               </a>
             </div>
 
             @if (body.helpline || body.whatsapp) {
               <div class="contacts">
-                <span class="muted label">Stuck on their form?</span>
+                <span class="muted label">{{ t('portal.stuck') }}</span>
                 @if (body.helpline) {
                   <a class="contact" [href]="'tel:' + dial(body.helpline)">
                     <span aria-hidden="true">📞</span> {{ body.helpline }}
@@ -186,20 +188,18 @@ import { ALL_JURISDICTIONS } from '../core/portal/jurisdiction';
           }
 
           @case ('tracked') {
-            <p class="eyebrow">Filed with the authority</p>
+            <p class="eyebrow">{{ t('portal.filedWithAuthority') }}</p>
             <h3>{{ body.name }} · {{ ticket().portal_reference_id }}</h3>
-            <p class="muted why">
-              Tracked alongside your CivicPulse ticket. If they go quiet, chase it below.
-            </p>
+            <p class="muted why">{{ t('portal.trackedTogether') }}</p>
             <div class="actions">
               <a class="btn-ghost link-btn" [href]="body.web_url" target="_blank" rel="noopener">
-                Check status on {{ body.jurisdiction }} ↗
+                {{ t('portal.checkStatus', { jurisdiction: body.jurisdiction }) }}
               </a>
             </div>
 
             @if (body.helpline || body.whatsapp) {
               <div class="contacts">
-                <span class="muted label">Chase it</span>
+                <span class="muted label">{{ t('portal.chase') }}</span>
                 @if (body.helpline) {
                   <a class="contact" [href]="'tel:' + dial(body.helpline)">
                     <span aria-hidden="true">📞</span> {{ body.helpline }}
@@ -225,9 +225,7 @@ import { ALL_JURISDICTIONS } from '../core/portal/jurisdiction';
                and asks for the number; it never resubmits anything, because
                the citizen may well have filed it and simply not told us. -->
           <p class="alert nudge" role="status">
-            You started this {{ body.jurisdiction }} complaint yesterday and it is still
-            unconfirmed. If you filed it, add the number above — if not, the portal is still
-            one tap away.
+            {{ t('portal.nudge', { jurisdiction: body.jurisdiction }) }}
           </p>
         }
       </div>
@@ -362,6 +360,10 @@ import { ALL_JURISDICTIONS } from '../core/portal/jurisdiction';
   `,
 })
 export class PortalHandoff {
+  protected readonly i18n = inject(I18nService);
+  /** Bound so templates read `t('key')`; repaints when the language changes. */
+  protected readonly t = this.i18n.t.bind(this.i18n);
+
   private readonly portals = inject(PortalService);
 
   readonly ticket = input.required<GrievanceTicket>();

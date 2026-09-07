@@ -6,16 +6,16 @@
       <!-- Hover-revealed; :focus-within keeps it reachable by keyboard. -->
       <div class="menu">
         <button type="button" class="trigger" aria-haspopup="true">
-          Report Issue <span class="caret" aria-hidden="true">▾</span>
+          {{ t('nav.reportIssue') }} <span class="caret" aria-hidden="true">▾</span>
         </button>
         <div class="dropdown-card menu-panel">
           <button type="button" class="dropdown-item" (click)="snapLivePhoto()">
-            <span class="item-title">Snap Live Photo</span>
-            <span class="item-sub">Opens the camera at the scene</span>
+            <span class="item-title">{{ t('nav.snapPhoto') }}</span>
+            <span class="item-sub">{{ t('nav.snapPhotoSub') }}</span>
           </button>
           <a class="dropdown-item" routerLink="/report">
-            <span class="item-title">Quick Alert</span>
-            <span class="item-sub">Full report with category and ward</span>
+            <span class="item-title">{{ t('nav.quickAlert') }}</span>
+            <span class="item-sub">{{ t('nav.quickAlertSub') }}</span>
           </a>
         </div>
       </div>
@@ -28,12 +28,12 @@
           [attr.aria-expanded]="regionOpen()"
           (click)="toggleRegion()"
         >
-          Issues by Region <span class="caret" aria-hidden="true">▾</span>
+          {{ t('nav.issuesByRegion') }} <span class="caret" aria-hidden="true">▾</span>
         </button>
 
         @if (regionOpen()) {
           <div class="dropdown-card menu-panel region">
-            <p class="region-label">Search by</p>
+            <p class="region-label">{{ t('nav.searchBy') }}</p>
             <div class="modes">
               <button
                 type="button"
@@ -41,7 +41,7 @@
                 [class.active]="regionMode() === 'city'"
                 (click)="setRegionMode('city')"
               >
-                City name
+                {{ t('nav.cityName') }}
               </button>
               <button
                 type="button"
@@ -49,7 +49,7 @@
                 [class.active]="regionMode() === 'pincode'"
                 (click)="setRegionMode('pincode')"
               >
-                Pincode
+                {{ t('nav.pincode') }}
               </button>
             </div>
 
@@ -57,11 +57,15 @@
               <input
                 name="regionQuery"
                 [(ngModel)]="regionQuery"
-                [placeholder]="regionMode() === 'city' ? 'e.g. New Delhi' : 'e.g. 110042'"
+                [placeholder]="
+                  regionMode() === 'city'
+                    ? t('nav.cityPlaceholder')
+                    : t('nav.pincodePlaceholder')
+                "
                 [attr.inputmode]="regionMode() === 'pincode' ? 'numeric' : 'text'"
-                aria-label="Region search"
+                [attr.aria-label]="t('nav.regionSearchLabel')"
               />
-              <button class="btn-slate" type="submit">Search</button>
+              <button class="btn-slate" type="submit">{{ t('nav.search') }}</button>
             </form>
           </div>
         }
@@ -69,14 +73,32 @@
     </nav>
 
     <div class="right popover-host">
+      <!-- Two taps' worth of UI, deliberately always visible rather than
+           buried in settings: someone who needs Hindi cannot be expected to
+           navigate English menus to find the switch. -->
+      <div class="lang" role="group" [attr.aria-label]="t('nav.language')">
+        @for (option of i18n.languages; track option.code) {
+          <button
+            type="button"
+            class="lang-btn"
+            [class.active]="i18n.lang() === option.code"
+            [attr.aria-pressed]="i18n.lang() === option.code"
+            [attr.aria-label]="option.label"
+            (click)="i18n.set(option.code)"
+          >
+            {{ option.short }}
+          </button>
+        }
+      </div>
+
       <button
         type="button"
         class="phone-btn"
         [attr.aria-expanded]="profileOpen()"
         [attr.aria-label]="
           notifications.pending() > 0
-            ? 'Your account — ' + notifications.pending() + ' reports waiting'
-            : 'Your account'
+            ? t('profile.yourAccount') + ' — ' + notifications.pending()
+            : t('profile.yourAccount')
         "
         (click)="toggleProfile()"
       >
@@ -103,11 +125,11 @@
             <!-- Header row -->
             <div class="pc-head">
               <div class="pc-id">
-                <p class="pc-name">{{ auth.fullName() || 'Your account' }}</p>
+                <p class="pc-name">{{ auth.fullName() || t('profile.yourAccount') }}</p>
                 <p class="pc-phone">{{ phoneDisplay() }}</p>
               </div>
-              <span class="pc-session" title="You have a valid session on this device">
-                <span class="pc-dot" aria-hidden="true"></span> Active Session
+              <span class="pc-session" [title]="t('profile.sessionTitle')">
+                <span class="pc-dot" aria-hidden="true"></span> {{ t('profile.activeSession') }}
               </span>
             </div>
 
@@ -115,13 +137,13 @@
             <div class="pc-stats">
               <div class="pc-stat">
                 <p class="pc-stat-value">{{ countsLoading() ? '—' : counts().active }}</p>
-                <p class="pc-stat-label">Active complaints</p>
+                <p class="pc-stat-label">{{ t('profile.activeComplaints') }}</p>
               </div>
               <div class="pc-stat">
                 <p class="pc-stat-value resolved">
                   {{ countsLoading() ? '—' : counts().resolved }}
                 </p>
-                <p class="pc-stat-label">Resolved</p>
+                <p class="pc-stat-label">{{ t('profile.resolved') }}</p>
               </div>
             </div>
 
@@ -134,40 +156,40 @@
               <a class="pc-link" routerLink="/profile" routerLinkActive="active">
                 <span class="pc-icon" aria-hidden="true">📋</span>
                 <span>
-                  <span class="pc-link-title">My Complaints</span>
-                  <span class="pc-link-sub">Full activity history</span>
+                  <span class="pc-link-title">{{ t('profile.myComplaints') }}</span>
+                  <span class="pc-link-sub">{{ t('profile.myComplaintsSub') }}</span>
                 </span>
               </a>
 
               <a class="pc-link" routerLink="/escalations" routerLinkActive="active">
                 <span class="pc-icon" aria-hidden="true">⚡</span>
                 <span>
-                  <span class="pc-link-title">Ticket Escalations</span>
-                  <span class="pc-link-sub">24-hour auto-escalation status</span>
+                  <span class="pc-link-title">{{ t('profile.escalations') }}</span>
+                  <span class="pc-link-sub">{{ t('profile.escalationsSub') }}</span>
                 </span>
               </a>
 
               <a class="pc-link" routerLink="/resolved" routerLinkActive="active">
                 <span class="pc-icon" aria-hidden="true">🖼️</span>
                 <span>
-                  <span class="pc-link-title">Resolved Photos</span>
-                  <span class="pc-link-sub">Before &amp; after proof from the desk</span>
+                  <span class="pc-link-title">{{ t('profile.resolvedPhotos') }}</span>
+                  <span class="pc-link-sub">{{ t('profile.resolvedPhotosSub') }}</span>
                 </span>
               </a>
 
               <a class="pc-link" routerLink="/pulse-points" routerLinkActive="active">
                 <span class="pc-icon" aria-hidden="true">🪙</span>
                 <span>
-                  <span class="pc-link-title">Pulse Points</span>
-                  <span class="pc-link-sub">Earn points, claim rewards</span>
+                  <span class="pc-link-title">{{ t('profile.pulsePoints') }}</span>
+                  <span class="pc-link-sub">{{ t('profile.pulsePointsSub') }}</span>
                 </span>
               </a>
 
               <a class="pc-link" routerLink="/security" routerLinkActive="active">
                 <span class="pc-icon" aria-hidden="true">🔒</span>
                 <span>
-                  <span class="pc-link-title">Security Settings</span>
-                  <span class="pc-link-sub">Password &amp; account security</span>
+                  <span class="pc-link-title">{{ t('profile.security') }}</span>
+                  <span class="pc-link-sub">{{ t('profile.securitySub') }}</span>
                 </span>
               </a>
 
@@ -175,8 +197,8 @@
                 <a class="pc-link" routerLink="/admin" routerLinkActive="active">
                   <span class="pc-icon" aria-hidden="true">🛠️</span>
                   <span>
-                    <span class="pc-link-title">Control Desk</span>
-                    <span class="pc-link-sub">Reports, feedback &amp; citizens</span>
+                    <span class="pc-link-title">{{ t('profile.controlDesk') }}</span>
+                    <span class="pc-link-sub">{{ t('profile.controlDeskSub') }}</span>
                   </span>
 
                   <!-- Unhandled reports. Absent rather than "0" when the queue
@@ -196,13 +218,13 @@
 
             <!-- Footer action -->
             <button type="button" class="pc-signout" (click)="signOut()">
-              <span aria-hidden="true">🚪</span> Sign Out
+              <span aria-hidden="true">🚪</span> {{ t('profile.signOut') }}
             </button>
           } @else {
-            <p class="card-label">Not signed in</p>
-            <p class="card-name">Sign in with your phone number to file and track reports.</p>
+            <p class="card-label">{{ t('profile.notSignedIn') }}</p>
+            <p class="card-name">{{ t('profile.notSignedInSub') }}</p>
             <div class="card-links">
-              <a class="dropdown-item" routerLink="/auth">Sign in or register</a>
+              <a class="dropdown-item" routerLink="/auth">{{ t('profile.signInOrRegister') }}</a>
             </div>
           }
         </div>

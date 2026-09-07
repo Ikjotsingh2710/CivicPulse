@@ -1,5 +1,6 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
+import { I18nService } from '../../core/i18n.service';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { EXACT_ACCURACY_M, explainGeolocationError, watchBestFix } from '../../core/geolocate';
@@ -34,23 +35,21 @@ import { PortalHandoff } from '../../shared/portal-handoff';
   ],
   template: `
     <div class="page">
-      <h1>File a report</h1>
-      <p class="muted lead">
-        A photo and a location are what get a ticket actioned. Everything else helps the ward desk
-        route it faster.
-      </p>
+      <h1>{{ t('report.title') }}</h1>
+      <p class="muted lead">{{ t('report.lead') }}</p>
 
       @if (filed(); as ticket) {
         <div class="card confirmation">
-          <p class="pill pill-resolved">Filed</p>
+          <p class="pill pill-resolved">{{ t('report.filed') }}</p>
           <h2>{{ ticket.ticket_number }}</h2>
           <p class="muted">
-            Your report is with the {{ ticket.ward_location }} desk. Track its status any time from
-            your profile.
+            {{ t('report.filedWith', { ward: ticket.ward_location }) }}
           </p>
           <div class="row">
-            <a class="btn-primary link-btn" routerLink="/profile">Track this ticket</a>
-            <button class="btn-ghost" type="button" (click)="fileAnother()">File another</button>
+            <a class="btn-primary link-btn" routerLink="/profile">{{ t('report.track') }}</a>
+            <button class="btn-ghost" type="button" (click)="fileAnother()">
+              {{ t('report.fileAnother') }}
+            </button>
           </div>
         </div>
 
@@ -66,42 +65,44 @@ import { PortalHandoff } from '../../shared/portal-handoff';
 
           <div class="grid">
             <div class="field">
-              <label for="category">Category</label>
+              <label for="category">{{ t('report.category') }}</label>
               <select id="category" name="category" [(ngModel)]="category" required>
                 @for (option of categories; track option) {
-                  <option [value]="option">{{ option }}</option>
+                  <option [value]="option">{{ label('category', option) }}</option>
                 }
               </select>
             </div>
 
             <div class="field">
-              <label for="urgency">Urgency</label>
+              <label for="urgency">{{ t('report.urgency') }}</label>
               <select id="urgency" name="urgency" [(ngModel)]="urgency" required>
                 @for (option of urgencies; track option) {
-                  <option [value]="option">{{ option }}</option>
+                  <option [value]="option">{{ label('urgency', option) }}</option>
                 }
               </select>
             </div>
           </div>
 
           <div class="field">
-            <label for="ward">Ward / campus location</label>
+            <label for="ward">{{ t('report.ward') }}</label>
             <input
               id="ward"
               name="ward"
-              placeholder="Ward 12, North Campus"
+              [placeholder]="t('report.wardPlaceholder')"
               [(ngModel)]="wardLocation"
               required
             />
           </div>
 
           <div class="field">
-            <label for="description">What's wrong? <span class="opt">optional</span></label>
+            <label for="description">
+              {{ t('report.whatsWrong') }} <span class="opt">{{ t('report.optional') }}</span>
+            </label>
             <textarea
               id="description"
               name="description"
               [maxlength]="limit"
-              placeholder="Describe the damage, how long it has been there, and anything unsafe about it."
+              [placeholder]="t('report.descPlaceholder')"
               [ngModel]="description()"
               (ngModelChange)="description.set($event)"
             ></textarea>
@@ -109,12 +110,12 @@ import { PortalHandoff } from '../../shared/portal-handoff';
           </div>
 
           <div class="field">
-            <label>Photo</label>
+            <label>{{ t('report.photo') }}</label>
             <!-- Live capture only: a gallery upload cannot be trusted to be
                  this issue, at this place, now. -->
             <button class="btn-slate" type="button" (click)="cameraOpen.set(true)">
               <span aria-hidden="true">📷</span>
-              {{ previewUrl() ? 'Retake live photo' : 'Snap live photo' }}
+              {{ previewUrl() ? t('report.retakePhoto') : t('report.snapPhoto') }}
             </button>
             @if (previewUrl(); as preview) {
               <img cpZoom class="preview" [src]="preview" alt="Captured report photo" />
@@ -122,10 +123,10 @@ import { PortalHandoff } from '../../shared/portal-handoff';
           </div>
 
           <div class="field">
-            <label>Location</label>
+            <label>{{ t('report.location') }}</label>
             <div class="row">
               <button class="btn-ghost" type="button" (click)="captureLocation()" [disabled]="locating()">
-                {{ locating() ? 'Locating…' : 'Use my current location' }}
+                {{ locating() ? t('report.locating') : t('report.useLocation') }}
               </button>
               @if (latitude() !== null) {
                 <span class="muted coords">
@@ -133,7 +134,7 @@ import { PortalHandoff } from '../../shared/portal-handoff';
                   @if (accuracy(); as m) {
                     · ±{{ m | number: '1.0-0' }}m
                     @if (m > exact) {
-                      <b class="rough">approximate</b>
+                      <b class="rough">{{ t('report.approximate') }}</b>
                     }
                   }
                 </span>
@@ -145,7 +146,7 @@ import { PortalHandoff } from '../../shared/portal-handoff';
           </div>
 
           <div class="field">
-            <label for="department">Department email (optional)</label>
+            <label for="department">{{ t('report.departmentEmail') }}</label>
             <input
               id="department"
               name="department"
@@ -153,14 +154,11 @@ import { PortalHandoff } from '../../shared/portal-handoff';
               placeholder="works.ward12@city.gov"
               [(ngModel)]="departmentEmail"
             />
-            <span class="muted coords">
-              Set this and the ticket is auto-escalated by email if it is still unresolved after 24
-              hours.
-            </span>
+            <span class="muted coords">{{ t('report.departmentHint') }}</span>
           </div>
 
           <button class="btn-primary submit" type="submit" [disabled]="busy()">
-            {{ busy() ? 'Filing…' : 'Submit report' }}
+            {{ busy() ? t('report.filing') : t('report.submit') }}
           </button>
         </form>
       }
@@ -185,7 +183,7 @@ import { PortalHandoff } from '../../shared/portal-handoff';
 
     @if (backed(); as number) {
       <p class="alert alert-ok" role="status">
-        Added your voice to {{ number }} instead of filing a duplicate.
+        {{ t('report.backed', { number }) }}
       </p>
     }
   `,
@@ -269,6 +267,12 @@ import { PortalHandoff } from '../../shared/portal-handoff';
   `,
 })
 export class ReportPage {
+  protected readonly i18n = inject(I18nService);
+  /** Bound so templates read `t('key')`; repaints when the language changes. */
+  protected readonly t = this.i18n.t.bind(this.i18n);
+  /** For values stored in English: the category and urgency dropdowns. */
+  protected readonly label = this.i18n.label.bind(this.i18n);
+
   private readonly tickets = inject(TicketsService);
   private readonly media = inject(MediaService);
   protected readonly auth = inject(AuthService);
@@ -346,11 +350,11 @@ export class ReportPage {
     if (this.busy()) return;
 
     if (!this.photo) {
-      this.error.set('Attach a photo of the damage.');
+      this.error.set(this.t('report.needPhoto'));
       return;
     }
     if (!this.wardLocation.trim()) {
-      this.error.set('Enter the ward or campus location.');
+      this.error.set(this.t('report.needWard'));
       return;
     }
 
@@ -358,7 +362,7 @@ export class ReportPage {
     // which city to drive to, not which spot to repair. A coarse fix is still
     // accepted, and flagged, because an approximate area beats no report.
     if (this.latitude() === null || this.longitude() === null) {
-      this.error.set('Capture the location before filing — a crew needs somewhere to go.');
+      this.error.set(this.t('report.needLocation'));
       return;
     }
 

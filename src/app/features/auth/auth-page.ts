@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 
+import { I18nService } from '../../core/i18n.service';
 import { AuthService } from '../../core/auth.service';
 
 type Mode = 'signin' | 'register';
@@ -14,12 +15,8 @@ type Mode = 'signin' | 'register';
     <div class="auth-shell">
       <section class="intro">
         <p class="eyebrow">CivicPulse</p>
-        <h1>Report it once.<br />Track it to resolved.</h1>
-        <p class="muted">
-          Potholes, broken streetlights, waste and water leakage — filed with a photo and a
-          location, routed to the ward desk, escalated automatically if nobody acts within 24
-          hours.
-        </p>
+        <h1>{{ t('auth.headline') }}</h1>
+        <p class="muted">{{ t('auth.intro') }}</p>
       </section>
 
       <div class="card panel">
@@ -32,7 +29,7 @@ type Mode = 'signin' | 'register';
             [attr.aria-selected]="mode() === 'signin'"
             (click)="setMode('signin')"
           >
-            Sign in
+            {{ t('auth.signIn') }}
           </button>
           <button
             type="button"
@@ -42,7 +39,7 @@ type Mode = 'signin' | 'register';
             [attr.aria-selected]="mode() === 'register'"
             (click)="setMode('register')"
           >
-            Register
+            {{ t('auth.register') }}
           </button>
         </div>
 
@@ -53,7 +50,7 @@ type Mode = 'signin' | 'register';
         <form (ngSubmit)="submit()">
           @if (mode() === 'register') {
             <div class="field">
-              <label for="fullName">Full name</label>
+              <label for="fullName">{{ t('auth.fullName') }}</label>
               <input
                 id="fullName"
                 name="fullName"
@@ -65,7 +62,7 @@ type Mode = 'signin' | 'register';
           }
 
           <div class="field">
-            <label for="phone">Phone number</label>
+            <label for="phone">{{ t('auth.phone') }}</label>
             <input
               id="phone"
               name="phone"
@@ -79,7 +76,7 @@ type Mode = 'signin' | 'register';
           </div>
 
           <div class="field">
-            <label for="password">Password</label>
+            <label for="password">{{ t('auth.password') }}</label>
             <input
               id="password"
               name="password"
@@ -91,13 +88,17 @@ type Mode = 'signin' | 'register';
           </div>
 
           <button class="btn-primary submit" type="submit" [disabled]="busy()">
-            {{ busy() ? 'Working…' : mode() === 'register' ? 'Create account' : 'Sign in' }}
+            {{
+              busy()
+                ? t('auth.working')
+                : mode() === 'register'
+                  ? t('auth.createAccount')
+                  : t('auth.signIn')
+            }}
           </button>
         </form>
 
-        <p class="muted note">
-          No OTP, no email — your phone number is your identity and it never leaves this project.
-        </p>
+        <p class="muted note">{{ t('auth.note') }}</p>
       </div>
     </div>
   `,
@@ -193,6 +194,10 @@ type Mode = 'signin' | 'register';
   `,
 })
 export class AuthPage {
+  protected readonly i18n = inject(I18nService);
+  /** Bound so templates read `t('key')`; repaints when the language changes. */
+  protected readonly t = this.i18n.t.bind(this.i18n);
+
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);

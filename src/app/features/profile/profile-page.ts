@@ -6,6 +6,7 @@ import { AuthService } from '../../core/auth.service';
 import { TicketsService } from '../../core/tickets.service';
 import { PhotoZoom } from '../../shared/photo-zoom';
 import { PhotoSrc } from '../../shared/photo-src';
+import { I18nService } from '../../core/i18n.service';
 import { PortalHandoff } from '../../shared/portal-handoff';
 import { TICKET_PIPELINE, type GrievanceTicket, type TicketStatus } from '../../core/models';
 
@@ -17,10 +18,10 @@ import { TICKET_PIPELINE, type GrievanceTicket, type TicketStatus } from '../../
     <div class="page">
       <header class="head">
         <div>
-          <h1>{{ auth.fullName() || 'Your reports' }}</h1>
+          <h1>{{ auth.fullName() || t('myreports.yourReports') }}</h1>
           <p class="muted">{{ auth.phone() }}</p>
         </div>
-        <a class="btn-ghost link-btn" routerLink="/report">File a new report</a>
+        <a class="btn-ghost link-btn" routerLink="/report">{{ t('myreports.fileNew') }}</a>
       </header>
 
       @if (error(); as message) {
@@ -28,15 +29,12 @@ import { TICKET_PIPELINE, type GrievanceTicket, type TicketStatus } from '../../
       }
 
       @if (loading()) {
-        <p class="muted">Loading your tickets…</p>
+        <p class="muted">{{ t('myreports.loading') }}</p>
       } @else if (tickets().length === 0) {
         <div class="card empty">
-          <h2>Nothing filed yet</h2>
-          <p class="muted">
-            Reports you file appear here with a live status trail and the ward desk's resolution
-            photos.
-          </p>
-          <a class="btn-primary link-btn" routerLink="/report">File your first report</a>
+          <h2>{{ t('myreports.nothingYet') }}</h2>
+          <p class="muted">{{ t('myreports.nothingYetSub') }}</p>
+          <a class="btn-primary link-btn" routerLink="/report">{{ t('myreports.fileFirst') }}</a>
         </div>
       } @else {
         <div class="list">
@@ -45,12 +43,15 @@ import { TICKET_PIPELINE, type GrievanceTicket, type TicketStatus } from '../../
               <header class="ticket-head">
                 <div>
                   <p class="number">{{ ticket.ticket_number }}</p>
-                  <h2>{{ ticket.category }}</h2>
+                  <h2>{{ label('category', ticket.category) }}</h2>
                   <p class="muted meta">
-                    {{ ticket.ward_location }} · filed {{ ticket.created_at | date: 'd MMM y' }}
+                    {{ ticket.ward_location }} · {{ t('myreports.filedOn') }}
+                    {{ ticket.created_at | date: 'd MMM y' }}
                   </p>
                 </div>
-                <span class="pill" [class]="statusPill(ticket.status)">{{ ticket.status }}</span>
+                <span class="pill" [class]="statusPill(ticket.status)">
+                  {{ label('status', ticket.status) }}
+                </span>
               </header>
 
               @if (ticket.description) {
@@ -62,11 +63,9 @@ import { TICKET_PIPELINE, type GrievanceTicket, type TicketStatus } from '../../
                      moving along it, and saying so plainly beats a stalled
                      timeline the citizen has to interpret. -->
                 <div class="rejected">
-                  <p class="rej-head">This report was not accepted</p>
+                  <p class="rej-head">{{ t('myreports.rejectedHead') }}</p>
                   <p class="rej-why">{{ ticket.rejection_reason }}</p>
-                  <p class="muted rej-next">
-                    If you think this was a mistake, file it again with a clearer photo.
-                  </p>
+                  <p class="muted rej-next">{{ t('myreports.rejectedNext') }}</p>
                 </div>
               }
 
@@ -78,21 +77,24 @@ import { TICKET_PIPELINE, type GrievanceTicket, type TicketStatus } from '../../
                 @for (stage of stages; track stage; let i = $index) {
                   <li [class.done]="i <= stepIndex(ticket.status)">
                     <span class="dot"></span>
-                    <span class="label">{{ stage }}</span>
+                    <span class="label">{{ label('status', stage) }}</span>
                   </li>
                 }
               </ol>
-              <p class="muted meta">Last updated {{ ticket.updated_at | date: 'd MMM y, h:mm a' }}</p>
+              <p class="muted meta">
+                {{ t('myreports.lastUpdatedLabel') }}
+                {{ ticket.updated_at | date: 'd MMM y, h:mm a' }}
+              </p>
 
               <div class="photos">
                 <figure>
                   <img cpZoom [cpPhoto]="ticket.image_url" [alt]="'Reported ' + ticket.category" />
-                  <figcaption class="muted">Before</figcaption>
+                  <figcaption class="muted">{{ t('myreports.before') }}</figcaption>
                 </figure>
                 @if (ticket.resolution_image_url) {
                   <figure>
                     <img cpZoom [cpPhoto]="ticket.resolution_image_url" alt="Resolution proof" />
-                    <figcaption class="muted">After</figcaption>
+                    <figcaption class="muted">{{ t('myreports.after') }}</figcaption>
                   </figure>
                 }
               </div>
@@ -304,6 +306,12 @@ import { TICKET_PIPELINE, type GrievanceTicket, type TicketStatus } from '../../
   `,
 })
 export class ProfilePage {
+  protected readonly i18n = inject(I18nService);
+  /** Bound so templates read `t('key')`; repaints when the language changes. */
+  protected readonly t = this.i18n.t.bind(this.i18n);
+  /** For values stored in English: status pills, category headings. */
+  protected readonly label = this.i18n.label.bind(this.i18n);
+
   private readonly service = inject(TicketsService);
   protected readonly auth = inject(AuthService);
 

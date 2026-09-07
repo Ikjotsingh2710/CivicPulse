@@ -24,6 +24,7 @@ import {
   type TicketCategory,
 } from '../../core/models';
 import { searchPlaces, type Place, type PlaceKind } from '../../core/places';
+import { I18nService } from '../../core/i18n.service';
 import { CameraCapture, type CapturedLocation } from '../../shared/camera-capture';
 import { MapBackdrop } from '../../shared/map-backdrop';
 import { FeedbackLauncher } from '../../shared/feedback-launcher';
@@ -49,7 +50,7 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
 
       <div class="hero-inner">
         <!-- Segmented scope toggle -->
-        <div class="segment" role="tablist" aria-label="What do you want to do">
+        <div class="segment" role="tablist" [attr.aria-label]="t('home.segmentLabel')">
           <button type="button" role="tab" class="seg active" aria-selected="true">
             <span aria-hidden="true">◈</span> Report an issue
           </button>
@@ -59,10 +60,10 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
         </div>
 
         <h1>
-          Fix your campus<br />
+          {{ t('home.fixYourCampus') }}<br />
           &amp; city issues
         </h1>
-        <p class="sub">Snap a live photo, auto-geotag, and track real-time resolution.</p>
+        <p class="sub">{{ t('home.heroSub') }}</p>
 
         <!-- One capsule: campus, issue type, live geotag, then the action. -->
         <div class="capsule">
@@ -76,7 +77,7 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
               role="combobox"
               readonly
               [attr.aria-expanded]="campusOpen()"
-              placeholder="Select city or campus"
+              [placeholder]="t('home.selectPlace')"
               [value]="campus()?.name ?? ''"
               (focus)="openCampus()"
               (click)="openCampus()"
@@ -85,7 +86,7 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
             @if (campusOpen()) {
               <div class="dropdown-card sheet campus-list">
                 <!-- Which list you are searching, chosen first. -->
-                <div class="kind-tabs" role="tablist" aria-label="Search cities or campuses">
+                <div class="kind-tabs" role="tablist" [attr.aria-label]="t('home.searchLabel')">
                   <button
                     type="button"
                     role="tab"
@@ -94,7 +95,7 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
                     [attr.aria-selected]="placeKind() === 'city'"
                     (click)="setPlaceKind('city')"
                   >
-                    City
+                    {{ t('home.city') }}
                   </button>
                   <button
                     type="button"
@@ -104,7 +105,7 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
                     [attr.aria-selected]="placeKind() === 'campus'"
                     (click)="setPlaceKind('campus')"
                   >
-                    Campus
+                    {{ t('home.campus') }}
                   </button>
                 </div>
 
@@ -147,7 +148,7 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
                     <button
                       type="button"
                       class="search-clear"
-                      aria-label="Clear search"
+                      [attr.aria-label]="t('home.clearSearch')"
                       (click)="clearQuery()"
                     >
                       ×
@@ -174,7 +175,9 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
                     </button>
                   } @empty {
                     <p class="empty muted">
-                      No {{ placeKind() === 'campus' ? 'institution' : 'city' }} matches
+                      {{
+                        placeKind() === 'campus' ? t('home.noInstitution') : t('home.noCity')
+                      }}
                       “{{ query() }}”.
                     </p>
                   }
@@ -186,7 +189,7 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
           <div class="divider" aria-hidden="true"></div>
 
           <div class="cell popover-host">
-            <label id="issue-label">Issue</label>
+            <label id="issue-label">{{ t('home.issue') }}</label>
             <button
               type="button"
               class="cell-btn"
@@ -218,21 +221,21 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
           <div class="divider" aria-hidden="true"></div>
 
           <div class="cell">
-            <label>Location</label>
+            <label>{{ t('report.location') }}</label>
             @if (location(); as fix) {
               <p class="cell-value geo">
                 {{ abs(fix.latitude) }}° {{ fix.latitude >= 0 ? 'N' : 'S' }},
                 {{ abs(fix.longitude) }}° {{ fix.longitude >= 0 ? 'E' : 'W' }}
               </p>
             } @else {
-              <p class="cell-value dim">Locked on capture</p>
+              <p class="cell-value dim">{{ t('home.lockedOnCapture') }}</p>
             }
           </div>
 
           <button
             class="shutter"
             type="button"
-            aria-label="Snap live photo"
+            [attr.aria-label]="t('home.snapLabel')"
             (click)="startCapture()"
           >
             <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true">
@@ -249,8 +252,8 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
         </div>
 
         <p class="hint">
-          Live camera only — gallery uploads aren't accepted.
-          <a routerLink="/report">Need the full form?</a>
+          {{ t('home.liveOnly') }}
+          <a routerLink="/report">{{ t('home.needFullForm') }}</a>
         </p>
 
         @if (error(); as message) {
@@ -262,7 +265,7 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
             <div class="draft-top">
               <img cpZoom class="draft-shot" [src]="preview" alt="Captured issue photo" />
               <div class="draft-body">
-                <p class="draft-label">Ready to file</p>
+                <p class="draft-label">{{ t('home.readyToFile') }}</p>
                 <p class="draft-meta">
                   {{ categoryLabel() }} · {{ campus()?.name ?? 'No city or campus selected' }}
                 </p>
@@ -271,7 +274,7 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
 
             <!-- Everything the report still needs, in order. -->
             <div class="details">
-              <p class="details-label">What kind of issue is it?</p>
+              <p class="details-label">{{ t('home.whatKind') }}</p>
               <div class="kinds">
                 @for (option of categories; track option.value) {
                   <button
@@ -287,7 +290,7 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
               </div>
 
               @if (category()) {
-                <p class="details-label">Common reports — tap to use one</p>
+                <p class="details-label">{{ t('home.commonReports') }}</p>
                 <div class="templates">
                   @for (template of templates(); track template) {
                     <button
@@ -304,14 +307,15 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
 
               <div class="desc">
                 <label for="description">
-                  Description <span class="opt">or write your own</span>
+                  {{ t('home.description') }}
+                  <span class="opt">{{ t('home.orWriteOwn') }}</span>
                 </label>
                 <textarea
                   id="description"
                   name="description"
                   [maxlength]="limit"
                   rows="3"
-                  placeholder="Anything the ward desk should know — or describe a different issue."
+                  [placeholder]="t('home.descPlaceholder')"
                   [ngModel]="description()"
                   (ngModelChange)="description.set($event)"
                 ></textarea>
@@ -325,7 +329,9 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
               @if (blocker(); as reason) {
                 <p class="blocker">{{ reason }}</p>
               }
-              <button class="ghost-light" type="button" (click)="discard()">Discard</button>
+              <button class="ghost-light" type="button" (click)="discard()">
+                {{ t('home.discard') }}
+              </button>
               <button
                 class="gold"
                 type="button"
@@ -341,13 +347,13 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
         @if (filed(); as ticket) {
           <div class="draft filed">
             <div class="draft-body">
-              <p class="draft-label">Filed</p>
+              <p class="draft-label">{{ t('home.filed') }}</p>
               <p class="ticket-no">{{ ticket.ticket_number }}</p>
               <p class="draft-meta dim">
-                With the {{ ticket.ward_location }} desk · escalates after 24 hours
+                {{ t('home.withDesk', { ward: ticket.ward_location }) }}
               </p>
             </div>
-            <a class="gold link" routerLink="/profile">Track it</a>
+            <a class="gold link" routerLink="/profile">{{ t('home.trackIt') }}</a>
           </div>
         }
       </div>
@@ -358,16 +364,18 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
       <article class="card-tile">
         <div class="tile-art art-a" aria-hidden="true"></div>
         <div class="tile-body">
-          <h2>Shot at the scene.<br />Timestamped and placed.</h2>
-          <button type="button" class="tile-btn" (click)="startCapture()">Snap live photo</button>
+          <h2>{{ t('home.tileShot') }}</h2>
+          <button type="button" class="tile-btn" (click)="startCapture()">
+            {{ t('home.snapLabel') }}
+          </button>
         </div>
       </article>
 
       <article class="card-tile">
         <div class="tile-art art-b" aria-hidden="true"></div>
         <div class="tile-body">
-          <h2>Filed once.<br />Chased automatically.</h2>
-          <a class="tile-btn" routerLink="/profile">Track a report</a>
+          <h2>{{ t('home.tileFiled') }}</h2>
+          <a class="tile-btn" routerLink="/profile">{{ t('home.trackAReport') }}</a>
         </div>
       </article>
     </section>
@@ -393,7 +401,7 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
 
       @if (backed(); as number) {
         <p class="alert alert-ok" role="status">
-          Added your voice to {{ number }}. The ward desk sees it as affecting more people now.
+          {{ t('home.upvoted', { number }) }}
         </p>
       }
   `,
@@ -1250,6 +1258,12 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
   `,
 })
 export class HomePage {
+  protected readonly i18n = inject(I18nService);
+  /** Bound so templates read `t('key')`; repaints when the language changes. */
+  protected readonly t = this.i18n.t.bind(this.i18n);
+  /** For values stored in English: the category chips. */
+  protected readonly label = this.i18n.label.bind(this.i18n);
+
   private readonly tickets = inject(TicketsService);
   private readonly media = inject(MediaService);
   private readonly auth = inject(AuthService);
