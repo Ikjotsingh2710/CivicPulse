@@ -254,7 +254,7 @@ export function routeComplaint(input: RoutingInput): RoutingDecision {
   };
 }
 
-/** Every jurisdiction, for the "wrong department?" override list. */
+/** Every jurisdiction, in the order the directory lists them. */
 export const ALL_JURISDICTIONS: readonly Jurisdiction[] = [
   'MCD',
   'NDMC',
@@ -267,3 +267,60 @@ export const ALL_JURISDICTIONS: readonly Jurisdiction[] = [
   'PMC',
   'CPGRAMS',
 ];
+
+/**
+ * What each body will actually act on.
+ *
+ * `'all'` means a general-purpose corporation that takes any civic complaint.
+ * The two narrow entries are the ones worth being precise about: sending a
+ * pothole to the Jal Board wastes everyone's time, and PWD will not collect
+ * anyone's rubbish.
+ */
+const HANDLES: Readonly<Record<Jurisdiction, readonly string[] | 'all'>> = {
+  MCD: 'all',
+  NDMC: 'all',
+  PWD: ['Potholes', 'Other'],
+  DJB: ['Water Leakage'],
+  CANTT: 'all',
+  BMC: 'all',
+  BBMP: 'all',
+  GCC: 'all',
+  PMC: 'all',
+  CPGRAMS: 'all',
+};
+
+/** Whether a body is worth offering for this kind of problem. */
+export function handlesCategory(jurisdiction: Jurisdiction, category: string): boolean {
+  const handled = HANDLES[jurisdiction];
+  return handled === 'all' || handled.includes(category);
+}
+
+/**
+ * The bodies worth offering when the citizen says the guess is wrong.
+ *
+ * Ordered best-first, and filtered to the ones that could plausibly act: the
+ * override used to list all ten, which turned "this is not MCD's" into a
+ * geography quiz. Somebody in Pune has no use for the Delhi Cantonment Board.
+ *
+ * CPGRAMS is always last and always present, because a citizen who disagrees
+ * with every local option still needs somewhere real to go.
+ */
+export function candidatesFor(input: RoutingInput): Jurisdiction[] {
+  const city = cityFromCoordinates(input.latitude, input.longitude) ?? input.city;
+  const routed = routeComplaint(input).jurisdiction;
+
+  const local: Jurisdiction[] =
+    city === 'New Delhi'
+      ? ['MCD', 'NDMC', 'PWD', 'DJB', 'CANTT']
+      : city && CITY_BODIES[city]
+        ? [CITY_BODIES[city]]
+        : [];
+
+  const plausible = local.filter((code) => handlesCategory(code, input.category));
+
+  // The routed body leads even if the category filter would have dropped it —
+  // it is what the card is currently showing, so it has to stay selectable.
+  const ordered = [routed, ...plausible.filter((code) => code !== routed)];
+
+  return ordered.includes('CPGRAMS') ? ordered : [...ordered, 'CPGRAMS'];
+}

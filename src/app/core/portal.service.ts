@@ -22,7 +22,7 @@ import type {
   PreparedComplaint,
 } from './portal/connector';
 import { createConnector } from './portal/connector.factory';
-import { routeComplaint, type RoutingDecision } from './portal/jurisdiction';
+import { candidatesFor, routeComplaint, type RoutingDecision } from './portal/jurisdiction';
 
 /** How long a handoff may sit unconfirmed before /profile nudges about it. */
 export const HANDOFF_REMINDER_MS = 24 * 60 * 60 * 1000;
@@ -131,6 +131,30 @@ export class PortalService {
    */
   private cityOf(ticket: GrievanceTicket): string | null {
     return ticket.ward_location?.trim() || null;
+  }
+
+  /**
+   * The bodies worth offering when the citizen says the guess is wrong.
+   *
+   * Filtered to the ones that could plausibly act on this problem in this
+   * city. Offering all ten turned "this is not MCD's" into a geography quiz,
+   * and somebody in Pune has no use for the Delhi Cantonment Board.
+   */
+  async alternatives(ticket: GrievanceTicket): Promise<readonly Portal[]> {
+    const portals = await this.directory();
+
+    const codes = candidatesFor({
+      category: ticket.category,
+      city: this.cityOf(ticket),
+      latitude: ticket.latitude,
+      longitude: ticket.longitude,
+      description: ticket.description,
+      wardLocation: ticket.ward_location,
+    });
+
+    return codes
+      .map((code) => portals.find((portal) => portal.jurisdiction === code))
+      .filter((portal): portal is Portal => portal !== undefined);
   }
 
   /** Formats a complaint for a portal, ahead of the citizen's click. */

@@ -1,4 +1,10 @@
-import { cityFromCoordinates, routeComplaint, type RoutingInput } from './jurisdiction';
+import {
+  candidatesFor,
+  cityFromCoordinates,
+  handlesCategory,
+  routeComplaint,
+  type RoutingInput,
+} from './jurisdiction';
 
 /**
  * Routing decides which government body a citizen's complaint reaches. Getting
@@ -172,5 +178,73 @@ describe('routeComplaint — without coordinates', () => {
     const decision = routeComplaint(input({ latitude: null, longitude: null }));
 
     expect(decision.jurisdiction).toBe('MCD');
+  });
+});
+
+describe('candidatesFor — the "wrong department?" list', () => {
+  it('offers the other Delhi bodies for a Delhi pothole', () => {
+    const codes = candidatesFor(input());
+
+    expect(codes[0]).toBe('MCD');
+    expect(codes).toContain('NDMC');
+    expect(codes).toContain('PWD');
+    expect(codes).toContain('CANTT');
+  });
+
+  it('leaves out bodies that cannot act on the category', () => {
+    // The Jal Board does not fill potholes. Listing it would invite a citizen
+    // to send a complaint somewhere guaranteed to ignore it.
+    expect(candidatesFor(input())).not.toContain('DJB');
+
+    // And the reverse: PWD maintains roads, not pipes.
+    const water = candidatesFor(input({ category: 'Water Leakage' }));
+    expect(water[0]).toBe('DJB');
+    expect(water).not.toContain('PWD');
+  });
+
+  it('never offers a Delhi body outside Delhi', () => {
+    const codes = candidatesFor(
+      input({ city: 'Pune', wardLocation: 'Pune', latitude: 18.5204, longitude: 73.8567 }),
+    );
+
+    expect(codes).toEqual(['PMC', 'CPGRAMS']);
+  });
+
+  it('always ends somewhere real', () => {
+    // Whatever the citizen disagrees with, CPGRAMS is still on the list.
+    const cases = [
+      input(),
+      input({ category: 'Water Leakage' }),
+      input({ city: 'Meerut', wardLocation: 'Meerut', latitude: 28.9845, longitude: 77.7064 }),
+      input({ city: null, wardLocation: '', latitude: null, longitude: null }),
+    ];
+
+    for (const one of cases) {
+      expect(candidatesFor(one)).toContain('CPGRAMS');
+    }
+  });
+
+  it('lists no duplicates', () => {
+    for (const category of ['Potholes', 'Waste', 'Water Leakage', 'Other']) {
+      const codes = candidatesFor(input({ category }));
+      expect(codes.length).toBe(new Set(codes).size);
+    }
+  });
+});
+
+describe('handlesCategory', () => {
+  it('keeps the two narrow bodies narrow', () => {
+    expect(handlesCategory('DJB', 'Water Leakage')).toBe(true);
+    expect(handlesCategory('DJB', 'Potholes')).toBe(false);
+
+    expect(handlesCategory('PWD', 'Potholes')).toBe(true);
+    expect(handlesCategory('PWD', 'Waste')).toBe(false);
+  });
+
+  it('lets the general-purpose corporations take anything', () => {
+    for (const category of ['Potholes', 'Waste', 'Water Leakage', 'Broken Streetlight', 'Other']) {
+      expect(handlesCategory('MCD', category)).toBe(true);
+      expect(handlesCategory('CPGRAMS', category)).toBe(true);
+    }
   });
 });

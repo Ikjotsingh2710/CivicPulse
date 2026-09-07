@@ -54,6 +54,18 @@ export class I18nService {
     return key in STRINGS ? this.t(key) : value;
   }
 
+  /**
+   * What a government body covers, in one line.
+   *
+   * Falls back to an empty string rather than the key: a jurisdiction added to
+   * the database before its description is written should show a card with no
+   * subtitle, not one reading "portal.covers.XYZ".
+   */
+  covers(jurisdiction: string): string {
+    const key = `portal.covers.${jurisdiction}` as StringKey;
+    return key in STRINGS ? this.t(key) : '';
+  }
+
   set(lang: Lang): void {
     this.lang.set(lang);
     this.applyToDocument(lang);

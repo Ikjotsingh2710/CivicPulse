@@ -20,6 +20,14 @@ export const routes: Routes = [
     loadComponent: () => import('./features/issues/issues-page').then((m) => m.IssuesPage),
   },
   {
+    // Public on purpose: someone with a burst main and no account still needs
+    // the number, and there is nothing private in a published portal URL.
+    path: 'portals',
+    title: 'Where complaints go · CivicPulse',
+    loadComponent: () =>
+      import('./features/portals/portal-directory-page').then((m) => m.PortalDirectoryPage),
+  },
+  {
     path: 'report',
     title: 'File a report · CivicPulse',
     canActivate: [authGuard],

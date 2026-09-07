@@ -17,6 +17,10 @@
             <span class="item-title">{{ t('nav.quickAlert') }}</span>
             <span class="item-sub">{{ t('nav.quickAlertSub') }}</span>
           </a>
+          <a class="dropdown-item" routerLink="/portals">
+            <span class="item-title">{{ t('nav.portals') }}</span>
+            <span class="item-sub">{{ t('nav.portalsSub') }}</span>
+          </a>
         </div>
       </div>
 
@@ -174,6 +178,14 @@
                 <span>
                   <span class="pc-link-title">{{ t('profile.resolvedPhotos') }}</span>
                   <span class="pc-link-sub">{{ t('profile.resolvedPhotosSub') }}</span>
+                </span>
+              </a>
+
+              <a class="pc-link" routerLink="/portals" routerLinkActive="active">
+                <span class="pc-icon" aria-hidden="true">🏛️</span>
+                <span>
+                  <span class="pc-link-title">{{ t('nav.portals') }}</span>
+                  <span class="pc-link-sub">{{ t('nav.portalsSub') }}</span>
                 </span>
               </a>
 

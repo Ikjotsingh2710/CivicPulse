@@ -5,7 +5,7 @@ import { I18nService } from '../core/i18n.service';
 import { PortalService } from '../core/portal.service';
 import type { GrievanceTicket } from '../core/models';
 import type { HandoffResult, Jurisdiction, Portal, PreparedComplaint } from '../core/portal/connector';
-import { ALL_JURISDICTIONS } from '../core/portal/jurisdiction';
+
 
 /**
  * "Ready to send to X" — one button that carries a complaint to a government
@@ -63,20 +63,23 @@ import { ALL_JURISDICTIONS } from '../core/portal/jurisdiction';
             </div>
 
             @if (picking()) {
-              <div class="field switcher">
-                <label for="jurisdiction">{{ t('portal.sendTo') }}</label>
-                <select
-                  id="jurisdiction"
-                  name="jurisdiction"
-                  [ngModel]="body.jurisdiction"
-                  (ngModelChange)="choose($event)"
-                >
-                  @for (option of options(); track option.jurisdiction) {
-                    <option [value]="option.jurisdiction">
-                      {{ option.name }}
-                    </option>
-                  }
-                </select>
+              <!-- Described choices, not a list of acronyms. Someone overruling
+                   our guess is doing it because they know their own street —
+                   they should be picking between what these bodies do. -->
+              <div class="switcher" role="listbox" [attr.aria-label]="t('portal.sendTo')">
+                @for (option of options(); track option.jurisdiction) {
+                  <button
+                    type="button"
+                    class="option"
+                    role="option"
+                    [class.on]="option.jurisdiction === body.jurisdiction"
+                    [attr.aria-selected]="option.jurisdiction === body.jurisdiction"
+                    (click)="choose(option.jurisdiction)"
+                  >
+                    <span class="option-name">{{ option.name }}</span>
+                    <span class="option-covers">{{ covers(option.jurisdiction) }}</span>
+                  </button>
+                }
               </div>
             }
 
@@ -282,7 +285,42 @@ import { ALL_JURISDICTIONS } from '../core/portal/jurisdiction';
     }
 
     .switcher {
+      display: grid;
+      gap: 8px;
       margin-top: 14px;
+    }
+
+    .option {
+      display: grid;
+      gap: 3px;
+      text-align: left;
+      padding: 10px 13px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--surface-elevated);
+      color: var(--ink);
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .option:hover,
+    .option:focus-visible {
+      border-color: var(--accent);
+    }
+
+    .option.on {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .option-name {
+      font-weight: 700;
+      font-size: 0.92rem;
+    }
+
+    .option-covers {
+      font-size: 0.82rem;
+      color: var(--ink-muted);
     }
 
     .steps {
@@ -374,7 +412,6 @@ export class PortalHandoff {
   protected readonly reason = signal('');
   protected readonly prepared = signal<PreparedComplaint | null>(null);
   protected readonly result = signal<HandoffResult | null>(null);
-  protected readonly directory = signal<readonly Portal[]>([]);
 
   protected readonly preparing = signal(false);
   protected readonly busy = signal(false);
@@ -401,13 +438,8 @@ export class PortalHandoff {
   protected readonly sent = computed(() => this.stage() === 'tracked');
   protected readonly overdue = computed(() => this.portals.needsReminder(this.ticket()));
 
-  /** The override list, named rather than coded so the choice is meaningful. */
-  protected readonly options = computed(() => {
-    const rows = this.directory();
-    return ALL_JURISDICTIONS.map((jurisdiction) =>
-      rows.find((row) => row.jurisdiction === jurisdiction),
-    ).filter((row): row is Portal => row !== undefined);
-  });
+  /** Bodies that could plausibly act on this problem, best guess first. */
+  protected readonly options = signal<readonly Portal[]>([]);
 
   constructor() {
     void this.load();
@@ -419,12 +451,12 @@ export class PortalHandoff {
     if (!this.portals.offersHandoff(this.ticket())) return;
 
     try {
-      const [routed, directory] = await Promise.all([
+      const [routed, alternatives] = await Promise.all([
         this.portals.route(this.ticket(), override),
-        this.portals.directory(),
+        this.portals.alternatives(this.ticket()),
       ]);
 
-      this.directory.set(directory);
+      this.options.set(alternatives);
       if (!routed) return;
 
       this.portal.set(routed.portal);
@@ -473,6 +505,11 @@ export class PortalHandoff {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  /** One line on what a body covers, for the override list. */
+  protected covers(jurisdiction: Jurisdiction): string {
+    return this.i18n.covers(jurisdiction);
   }
 
   /**

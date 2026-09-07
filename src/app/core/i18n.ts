@@ -442,6 +442,80 @@ export const STRINGS = {
   },
   'feedback.cancel': { en: 'Cancel', hi: 'रद्द करें' },
 
+  // ---------------------------------------------------------- portal directory
+  'portals.title': { en: 'Where complaints go', hi: 'शिकायतें कहाँ जाती हैं' },
+  'portals.lead': {
+    en: 'Every government body CivicPulse can hand a complaint to, with the number to call if the website will not load. File through CivicPulse and we pick the right one for you — this page is for when you want to go straight there.',
+    hi: 'हर वह सरकारी विभाग जिसे CivicPulse शिकायत भेज सकता है, और वह नंबर भी जिस पर वेबसाइट न खुले तो कॉल किया जा सके। CivicPulse से शिकायत करें तो सही विभाग हम चुन लेते हैं — यह पेज तब के लिए है जब आप सीधे वहाँ जाना चाहें।',
+  },
+  'portals.filterCity': { en: 'City', hi: 'शहर' },
+  'portals.filterIssue': { en: 'Issue', hi: 'समस्या' },
+  'portals.all': { en: 'All', hi: 'सभी' },
+  'portals.national': { en: 'Nationwide', hi: 'पूरे देश में' },
+  'portals.openPortal': { en: 'Open portal ↗', hi: 'पोर्टल खोलें ↗' },
+  'portals.getApp': { en: 'Get the app ↗', hi: 'ऐप लें ↗' },
+  'portals.handles': { en: 'Handles', hi: 'संभालता है' },
+  'portals.anyCivic': { en: 'Any civic complaint', hi: 'हर तरह की नागरिक शिकायत' },
+  'portals.none': {
+    en: 'No body listed for that combination yet. The national portal below reaches every department.',
+    hi: 'इस संयोजन के लिए अभी कोई विभाग सूचीबद्ध नहीं है। नीचे दिया राष्ट्रीय पोर्टल हर विभाग तक पहुँचता है।',
+  },
+  'portals.loading': { en: 'Loading portals…', hi: 'पोर्टल लोड हो रहे हैं…' },
+  'portals.betterWay': {
+    en: 'Filing through CivicPulse first gets you a tracked ticket, a ward desk that chases it, and the complaint formatted and ready to paste here.',
+    hi: 'पहले CivicPulse से शिकायत करने पर आपको ट्रैक होने वाली शिकायत मिलती है, वार्ड डेस्क उसका पीछा करता है, और यहाँ पेस्ट करने के लिए शिकायत तैयार मिलती है।',
+  },
+  'portals.fileHere': { en: 'File through CivicPulse', hi: 'CivicPulse से शिकायत करें' },
+  'nav.portals': { en: 'Government portals', hi: 'सरकारी पोर्टल' },
+  'nav.portalsSub': {
+    en: 'Find the right body and call them',
+    hi: 'सही विभाग ढूँढें और उन्हें कॉल करें',
+  },
+
+  // What each body will actually act on. Shown in the directory and in the
+  // "wrong department?" list, so a citizen overriding our guess is choosing
+  // between descriptions rather than between acronyms.
+  'portal.covers.MCD': {
+    en: 'Most of Delhi — roads, rubbish, streetlights, drains, parks',
+    hi: 'दिल्ली का ज़्यादातर हिस्सा — सड़कें, कूड़ा, स्ट्रीटलाइट, नालियाँ, पार्क',
+  },
+  'portal.covers.NDMC': {
+    en: "Lutyens' Delhi — Connaught Place, India Gate, Chanakyapuri, the ministries",
+    hi: 'लुटियंस दिल्ली — कनॉट प्लेस, इंडिया गेट, चाणक्यपुरी, मंत्रालय',
+  },
+  'portal.covers.PWD': {
+    en: 'Delhi arterial roads — ring roads, margs, flyovers, underpasses',
+    hi: 'दिल्ली की मुख्य सड़कें — रिंग रोड, मार्ग, फ़्लाईओवर, अंडरपास',
+  },
+  'portal.covers.DJB': {
+    en: 'Water across all of Delhi — supply, leaks, burst mains, sewer',
+    hi: 'पूरी दिल्ली में पानी — आपूर्ति, रिसाव, पाइप फटना, सीवर',
+  },
+  'portal.covers.CANTT': {
+    en: 'Delhi Cantonment — the army-administered area around Sadar Bazar',
+    hi: 'दिल्ली छावनी — सदर बाज़ार के आसपास सेना द्वारा प्रशासित क्षेत्र',
+  },
+  'portal.covers.BMC': {
+    en: 'Greater Mumbai — roads, potholes, water, waste, drains',
+    hi: 'बृहन्मुंबई — सड़कें, गड्ढे, पानी, कूड़ा, नालियाँ',
+  },
+  'portal.covers.BBMP': {
+    en: 'Bengaluru — one app also covering water, power and transport',
+    hi: 'बेंगलुरु — एक ऐप, जिसमें पानी, बिजली और परिवहन भी शामिल',
+  },
+  'portal.covers.GCC': {
+    en: 'Chennai — roads, storm drains, waste, streetlights, stray animals',
+    hi: 'चेन्नई — सड़कें, नालियाँ, कूड़ा, स्ट्रीटलाइट, आवारा पशु',
+  },
+  'portal.covers.PMC': {
+    en: 'Pune — roads, water, sanitation, streetlights',
+    hi: 'पुणे — सड़कें, पानी, सफ़ाई, स्ट्रीटलाइट',
+  },
+  'portal.covers.CPGRAMS': {
+    en: 'Anywhere in India — reaches every central and state department',
+    hi: 'भारत में कहीं भी — हर केंद्रीय और राज्य विभाग तक पहुँचता है',
+  },
+
   // ------------------------------------------------------------------ common
   'common.loading': { en: 'Loading…', hi: 'लोड हो रहा है…' },
   'common.close': { en: 'Close', hi: 'बंद करें' },
