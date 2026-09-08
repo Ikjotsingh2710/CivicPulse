@@ -114,7 +114,7 @@ export class PortalService {
 
     const state = await this.stateFor(ticket);
     const statePortal = state
-      ? portals.find((row) => row.state !== null && row.state === state)
+      ? portals.find((row) => Boolean(row.state) && row.state === state)
       : undefined;
 
     if (statePortal) {
@@ -133,7 +133,10 @@ export class PortalService {
     // No local body, no state portal, and the router's choice is not in the
     // directory — a seed that never ran, or a row deactivated after this build
     // shipped. The national portal is the floor beneath everything.
-    const national = portals.find((row) => row.city === null && row.state === null);
+    // Loose checks on purpose: a database that has not had the state column
+    // added yet returns `undefined` rather than `null`, and a strict compare
+    // would find no national portal and drop the handoff entirely.
+    const national = portals.find((row) => !row.city && !row.state);
     if (!national) return null;
 
     return {
@@ -202,7 +205,7 @@ export class PortalService {
     // local body usually wants the level immediately above it, not Delhi.
     const state = await this.stateFor(ticket);
     const statePortal = state
-      ? portals.find((portal) => portal.state !== null && portal.state === state)
+      ? portals.find((portal) => Boolean(portal.state) && portal.state === state)
       : undefined;
 
     if (!statePortal || offered.some((portal) => portal.jurisdiction === statePortal.jurisdiction)) {

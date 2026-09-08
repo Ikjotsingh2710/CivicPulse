@@ -26,6 +26,7 @@ import {
 } from '../../core/models';
 import { searchPlaces, type Place, type PlaceKind } from '../../core/places';
 import { I18nService } from '../../core/i18n.service';
+import { PortalHandoff } from '../../shared/portal-handoff';
 import { CameraCapture, type CapturedLocation } from '../../shared/camera-capture';
 import { MapBackdrop } from '../../shared/map-backdrop';
 import { FeedbackLauncher } from '../../shared/feedback-launcher';
@@ -40,8 +41,7 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
     MapBackdrop,
     FeedbackLauncher,
     PhotoZoom,
-    DuplicatePrompt,
-  ],
+    DuplicatePrompt, PortalHandoff],
   template: `
     <section class="hero">
       <div class="map">
@@ -356,6 +356,11 @@ import { FeedbackLauncher } from '../../shared/feedback-launcher';
             </div>
             <a class="gold link" routerLink="/profile">{{ t('home.trackIt') }}</a>
           </div>
+
+          <!-- This is where most reports are actually filed, so the handoff
+               belongs here too. The card decides for itself whether to appear:
+               a campus report is the university's and gets nothing. -->
+          <cp-portal-handoff [ticket]="ticket" (tracked)="onPortalTracked($event)" />
         }
       </div>
     </section>
@@ -1337,6 +1342,14 @@ export class HomePage {
   protected readonly canFile = computed(() => this.photoUrl() !== null && this.blocker() === null);
 
   /** Reads the language signal, so the capsule relabels itself on a switch. */
+  /** The citizen came back with the portal's number; reflect it immediately. */
+  protected onPortalTracked(reference: string): void {
+    const ticket = this.filed();
+    if (!ticket) return;
+
+    this.filed.set({ ...ticket, portal_reference_id: reference, portal_status: 'submitted' });
+  }
+
   protected readonly categoryLabel = computed(() => {
     const value = this.category();
     if (!value) return this.i18n.t('home.selectIssue');
