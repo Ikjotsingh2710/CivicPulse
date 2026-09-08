@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { I18nService } from '../core/i18n.service';
@@ -397,7 +397,7 @@ import type { HandoffResult, Jurisdiction, Portal, PreparedComplaint } from '../
     }
   `,
 })
-export class PortalHandoff {
+export class PortalHandoff implements OnInit {
   protected readonly i18n = inject(I18nService);
   /** Bound so templates read `t('key')`; repaints when the language changes. */
   protected readonly t = this.i18n.t.bind(this.i18n);
@@ -441,7 +441,11 @@ export class PortalHandoff {
   /** Bodies that could plausibly act on this problem, best guess first. */
   protected readonly options = signal<readonly Portal[]>([]);
 
-  constructor() {
+  ngOnInit(): void {
+    // Not the constructor: a required input has no value until after
+    // construction, so reading `ticket()` there throws — and because load() is
+    // async that throw became a silently rejected promise and the card simply
+    // never appeared.
     void this.load();
   }
 
